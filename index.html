@@ -13,7 +13,7 @@
 /* Layout: one narrow centred column; a Delft tile carries each verb, everything else stays quiet around it. */
 :root{
   --paper:#F6F7FB; --surface:#FFFFFF; --ink:#131A2C; --muted:#5B6479; --line:#DDE2EE;
-  --delft:#2646A6; --delft-soft:#E8EDF9; --good:#1E7A54; --good-soft:#E3F3EB; --bad:#B23A30; --bad-soft:#FBEAE8;
+  --delft:#2646A6; --delft-soft:#E8EDF9; --accent2:#7C93D6; --good:#1E7A54; --good-soft:#E3F3EB; --bad:#B23A30; --bad-soft:#FBEAE8;
   --f-display:"Fraunces",Georgia,"Times New Roman",serif;
   --f-body:"Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
@@ -23,13 +23,13 @@
   :root:not([data-theme="light"]){
     color-scheme:dark;
     --paper:#0C1120; --surface:#141B2E; --ink:#E7EBF5; --muted:#97A1B8; --line:#263049;
-    --delft:#93ACF4; --delft-soft:#1A2547; --good:#5DC596; --good-soft:#12301F; --bad:#F2897F; --bad-soft:#3A1916;
+    --delft:#93ACF4; --delft-soft:#1A2547; --accent2:#5B74C2; --good:#5DC596; --good-soft:#12301F; --bad:#F2897F; --bad-soft:#3A1916;
   }
 }
 :root[data-theme="dark"]{
   color-scheme:dark;
   --paper:#0C1120; --surface:#141B2E; --ink:#E7EBF5; --muted:#97A1B8; --line:#263049;
-  --delft:#93ACF4; --delft-soft:#1A2547; --good:#5DC596; --good-soft:#12301F; --bad:#F2897F; --bad-soft:#3A1916;
+  --delft:#93ACF4; --delft-soft:#1A2547; --accent2:#5B74C2; --good:#5DC596; --good-soft:#12301F; --bad:#F2897F; --bad-soft:#3A1916;
 }
 *{box-sizing:border-box}
 body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;
@@ -51,7 +51,15 @@ nav{display:flex;gap:4px;background:var(--surface);border:1px solid var(--line);
 nav button{border:0;background:none;padding:6px 14px;border-radius:999px;color:var(--muted);font-weight:500}
 nav button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
 .bar{height:3px;background:var(--line);border-radius:3px;overflow:hidden}
-.bar span{display:block;height:100%;background:var(--delft);transition:width .4s}
+.bar span{display:block;height:100%;background:var(--accent2);transition:width .4s}
+[hidden]{display:none!important}
+.head-right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.themes{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:8px}
+.swatch{display:flex;align-items:center;gap:10px;border:1px solid transparent;background:none;border-radius:10px;padding:7px 8px;text-align:left;font-size:13px}
+.swatch:hover{background:var(--paper)}
+.swatch[aria-pressed="true"]{border-color:var(--delft);background:var(--delft-soft);font-weight:500}
+.sw{width:28px;height:28px;border-radius:50%;border:4px solid;display:grid;place-items:center;flex:none}
+.sw span{width:10px;height:10px;border-radius:50%}
 
 /* toolbar */
 .tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
@@ -64,7 +72,7 @@ select,.ghost,input[type="search"]{background:var(--surface);border:1px solid va
 
 /* tile */
 .tile{position:relative;width:var(--ts,168px);aspect-ratio:1;max-width:100%;color:var(--delft);background:var(--delft-soft);border-radius:6px;display:grid;place-items:center;flex:none}
-.tile>svg.orn{position:absolute;inset:0;width:100%;height:100%}
+.tile>svg.orn{position:absolute;inset:0;width:100%;height:100%;color:var(--accent2)}
 .tile .ic{display:grid;place-items:center}
 .tile .ic svg{width:calc(var(--ts,168px)*.48);height:calc(var(--ts,168px)*.48)}
 .tile .fallback{font-family:var(--f-display);font-size:calc(var(--ts,168px)*.4)}
@@ -175,12 +183,16 @@ td .tile .orn{display:none}
 <div class="app">
   <header>
     <div class="brand"><h1>ging <i>gegaan</i></h1></div>
-    <nav aria-label="Modus">
-      <button id="tab-cards" data-tab="cards" aria-pressed="true">Kaarten</button>
-      <button id="tab-quiz" data-tab="quiz" aria-pressed="false">Quiz</button>
-      <button id="tab-list" data-tab="list" aria-pressed="false">Lijst</button>
-    </nav>
+    <div class="head-right">
+      <nav aria-label="Modus">
+        <button id="tab-cards" data-tab="cards" aria-pressed="true">Kaarten</button>
+        <button id="tab-quiz" data-tab="quiz" aria-pressed="false">Quiz</button>
+        <button id="tab-list" data-tab="list" aria-pressed="false">Lijst</button>
+      </nav>
+      <button class="ghost" id="theme-btn" aria-expanded="false" aria-controls="themes" aria-label="Kleuren kiezen" title="Kleuren"><i data-lucide="palette"></i></button>
+    </div>
   </header>
+  <div class="themes" id="themes" hidden role="group" aria-label="Kleurenthema"></div>
   <div style="display:flex;flex-direction:column;gap:6px">
     <div class="progress mono" id="progress"></div>
     <div class="bar"><span id="bar"></span></div>
@@ -693,6 +705,42 @@ document.addEventListener("keydown", e=>{
   else if (e.key==="1") mark(false);
   else if (e.key==="2") mark(true);
 });
+
+/* ---------- color themes: [id, name, light, dark]; values = paper, surface, line, accent, tile, accent 2 ---------- */
+const THEMES = [
+ ["delft","Delfts blauw",["#F6F7FB","#FFFFFF","#DDE2EE","#2646A6","#E8EDF9","#7C93D6"],["#0C1120","#141B2E","#263049","#93ACF4","#1A2547","#5B74C2"]],
+ ["pastel","Pastel",["#FDF8FA","#FFFFFF","#F1DFE7","#B04E78","#FCE6EF","#6FBFA6"],["#1B1418","#251C21","#3A2A33","#F2A9C6","#3A2230","#8FD9C1"]],
+ ["lavendel","Lavendel",["#F9F7FD","#FFFFFF","#E6E0F3","#6E4FB8","#EEE8FA","#B7A3E8"],["#15121F","#1E1A2B","#302944","#C3B2F5","#2A2245","#8E78D6"]],
+ ["vuur","Oranje & rood",["#FFF9F5","#FFFFFF","#F5DED2","#C42F1F","#FFE7D6","#F2791C"],["#1A100D","#241714","#3E2620","#FF8A6B","#3D1C14","#FFA14A"]],
+ ["salie","Salie",["#F7F9F6","#FFFFFF","#DDE6DD","#3D6A4C","#E4EEE5","#93B79B"],["#0F1511","#172019","#27352A","#9FD0AE","#1C3022","#6E9C7A"]],
+ ["bos","Bos & limoen",["#F8FAF3","#FFFFFF","#DFE6CF","#2D6526","#EDF5D4","#9DC23A"],["#0E140C","#161F13","#283622","#B4DC6A","#1E3017","#7FA82E"]],
+ ["munt","Munt & teal",["#F4FBF9","#FFFFFF","#D3EAE4","#0F7362","#DDF4EE","#5CCFB1"],["#0B1513","#13201D","#223833","#7FE0C7","#123029","#3FB596"]],
+ ["oceaan","Oceaan & koraal",["#F5F9FA","#FFFFFF","#D6E6E9","#0E6874","#DCEFF1","#EE7F68"],["#0B1417","#121E22","#21363C","#74CBD6","#123139","#F59A86"]],
+ ["pruim","Pruim & goud",["#FAF7F8","#FFFFFF","#EADDE4","#6E2A5F","#F7EBD5","#C4952A"],["#160F14","#20161D","#3A2833","#E3A6D2","#3A2230","#E2B64F"]],
+ ["citroen","Citroen & marine",["#FAFAF4","#FFFFFF","#E5E4D2","#1F2E6B","#FFF3B8","#DDAE00"],["#0E1020","#161A2E","#2A2F4A","#A9B8F5","#2E2A12","#F2CC3D"]]
+];
+const TKEYS = ["paper","surface","line","delft","delft-soft","accent2"];
+let themeId = store.get("palette","delft");
+const darkMQ = window.matchMedia ? matchMedia("(prefers-color-scheme: dark)") : null;
+function isDark(){
+  const t = document.documentElement.getAttribute("data-theme");
+  return t==="dark" || (t!=="light" && !!darkMQ && darkMQ.matches);
+}
+function applyTheme(){
+  const th = THEMES.find(t=>t[0]===themeId) || THEMES[0], vals = isDark() ? th[3] : th[2];
+  TKEYS.forEach((k,i)=>document.body.style.setProperty("--"+k, vals[i]));
+  renderSwatches();
+}
+function renderSwatches(){
+  const d = isDark();
+  $("#themes").innerHTML = THEMES.map(([id,name,L,D])=>{ const v = d?D:L;
+    return `<button class="swatch" data-pal="${id}" aria-pressed="${id===themeId}"><span class="sw" style="background:${v[4]};border-color:${v[5]}"><span style="background:${v[3]}"></span></span>${name}</button>`; }).join("");
+  document.querySelectorAll("[data-pal]").forEach(b=>b.onclick=()=>{ themeId=b.dataset.pal; store.set("palette",themeId); applyTheme(); });
+}
+$("#theme-btn").onclick = () => { const p=$("#themes"); p.hidden=!p.hidden; $("#theme-btn").setAttribute("aria-pressed", !p.hidden); $("#theme-btn").setAttribute("aria-expanded", !p.hidden); };
+if (darkMQ && darkMQ.addEventListener) darkMQ.addEventListener("change", applyTheme);
+new MutationObserver(applyTheme).observe(document.documentElement, {attributes:true, attributeFilter:["data-theme"]});
+applyTheme();
 
 buildDeck();
 renderProgress();
