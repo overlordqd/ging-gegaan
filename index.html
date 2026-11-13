@@ -13,7 +13,7 @@
 /* Layout: one narrow centred column; a Delft tile carries each verb, everything else stays quiet around it. */
 :root{
   --paper:#F6F7FB; --surface:#FFFFFF; --ink:#131A2C; --muted:#5B6479; --line:#DDE2EE;
-  --delft:#2646A6; --delft-soft:#E8EDF9; --accent2:#7C93D6; --good:#1E7A54; --good-soft:#E3F3EB; --bad:#B23A30; --bad-soft:#FBEAE8;
+  --delft:#2646A6; --delft-soft:#E8EDF9; --accent2:#7C93D6; --flag-k:#000000; --flag-o:.38; --good:#1E7A54; --good-soft:#E3F3EB; --bad:#B23A30; --bad-soft:#FBEAE8;
   --f-display:"Fraunces",Georgia,"Times New Roman",serif;
   --f-body:"Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
@@ -23,13 +23,13 @@
   :root:not([data-theme="light"]){
     color-scheme:dark;
     --paper:#0C1120; --surface:#141B2E; --ink:#E7EBF5; --muted:#97A1B8; --line:#263049;
-    --delft:#93ACF4; --delft-soft:#1A2547; --accent2:#5B74C2; --good:#5DC596; --good-soft:#12301F; --bad:#F2897F; --bad-soft:#3A1916;
+    --delft:#93ACF4; --delft-soft:#1A2547; --accent2:#5B74C2; --flag-k:#5A5A5A; --flag-o:.5; --good:#5DC596; --good-soft:#12301F; --bad:#F2897F; --bad-soft:#3A1916;
   }
 }
 :root[data-theme="dark"]{
   color-scheme:dark;
   --paper:#0C1120; --surface:#141B2E; --ink:#E7EBF5; --muted:#97A1B8; --line:#263049;
-  --delft:#93ACF4; --delft-soft:#1A2547; --accent2:#5B74C2; --good:#5DC596; --good-soft:#12301F; --bad:#F2897F; --bad-soft:#3A1916;
+  --delft:#93ACF4; --delft-soft:#1A2547; --accent2:#5B74C2; --flag-k:#5A5A5A; --flag-o:.5; --good:#5DC596; --good-soft:#12301F; --bad:#F2897F; --bad-soft:#3A1916;
 }
 *{box-sizing:border-box}
 body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;
@@ -45,12 +45,10 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .brand{display:flex;align-items:baseline;gap:10px}
 .brand h1{margin:0;font-family:var(--f-display);font-weight:600;font-size:24px;letter-spacing:-.01em}
 .brand h1 i{font-style:italic;font-weight:400;color:var(--delft)}
-.brand{gap:12px}
-.flag{display:inline-flex;gap:3px;transform:skewX(-16deg);transform-origin:bottom}
-.flag span{width:8px;height:18px;border-radius:2px}
-.flag span:nth-child(1){background:#000;box-shadow:inset 0 0 0 1px var(--line)}
-.flag span:nth-child(2){background:#FDDA24}
-.flag span:nth-child(3){background:#EF3340}
+.brand h1{position:relative;isolation:isolate;padding:0 .15em}
+.brand h1::before{content:"";position:absolute;z-index:-1;left:0;right:-.1em;bottom:.06em;height:.52em;
+  background:linear-gradient(90deg,var(--flag-k) 0 33.33%,#FDDA24 33.33% 66.66%,#EF3340 66.66% 100%);
+  opacity:var(--flag-o);transform:skewX(-18deg);border-radius:3px}
 .progress{color:var(--muted)}
 .progress b{color:var(--ink);font-weight:500}
 nav{display:flex;gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:4px}
@@ -188,7 +186,7 @@ td .tile .orn{display:none}
 <body>
 <div class="app">
   <header>
-    <div class="brand"><h1>ging <i>gegaan</i></h1><span class="flag" aria-hidden="true"><span></span><span></span><span></span></span></div>
+    <div class="brand"><h1>ging <i>gegaan</i></h1></div>
     <div class="head-right">
       <nav aria-label="Modus">
         <button id="tab-cards" data-tab="cards" aria-pressed="true">Kaarten</button>
