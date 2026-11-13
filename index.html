@@ -708,16 +708,16 @@ document.addEventListener("keydown", e=>{
 
 /* ---------- color themes: [id, name, light, dark]; values = paper, surface, line, accent, tile, accent 2 ---------- */
 const THEMES = [
- ["delft","Delfts blauw",["#F6F7FB","#FFFFFF","#DDE2EE","#2646A6","#E8EDF9","#7C93D6"],["#0C1120","#141B2E","#263049","#93ACF4","#1A2547","#5B74C2"]],
- ["pastel","Pastel",["#FDF8FA","#FFFFFF","#F1DFE7","#B04E78","#FCE6EF","#6FBFA6"],["#1B1418","#251C21","#3A2A33","#F2A9C6","#3A2230","#8FD9C1"]],
- ["lavendel","Lavendel",["#F9F7FD","#FFFFFF","#E6E0F3","#6E4FB8","#EEE8FA","#B7A3E8"],["#15121F","#1E1A2B","#302944","#C3B2F5","#2A2245","#8E78D6"]],
- ["vuur","Oranje & rood",["#FFF9F5","#FFFFFF","#F5DED2","#C42F1F","#FFE7D6","#F2791C"],["#1A100D","#241714","#3E2620","#FF8A6B","#3D1C14","#FFA14A"]],
- ["salie","Salie",["#F7F9F6","#FFFFFF","#DDE6DD","#3D6A4C","#E4EEE5","#93B79B"],["#0F1511","#172019","#27352A","#9FD0AE","#1C3022","#6E9C7A"]],
- ["bos","Bos & limoen",["#F8FAF3","#FFFFFF","#DFE6CF","#2D6526","#EDF5D4","#9DC23A"],["#0E140C","#161F13","#283622","#B4DC6A","#1E3017","#7FA82E"]],
- ["munt","Munt & teal",["#F4FBF9","#FFFFFF","#D3EAE4","#0F7362","#DDF4EE","#5CCFB1"],["#0B1513","#13201D","#223833","#7FE0C7","#123029","#3FB596"]],
- ["oceaan","Oceaan & koraal",["#F5F9FA","#FFFFFF","#D6E6E9","#0E6874","#DCEFF1","#EE7F68"],["#0B1417","#121E22","#21363C","#74CBD6","#123139","#F59A86"]],
- ["pruim","Pruim & goud",["#FAF7F8","#FFFFFF","#EADDE4","#6E2A5F","#F7EBD5","#C4952A"],["#160F14","#20161D","#3A2833","#E3A6D2","#3A2230","#E2B64F"]],
- ["citroen","Citroen & marine",["#FAFAF4","#FFFFFF","#E5E4D2","#1F2E6B","#FFF3B8","#DDAE00"],["#0E1020","#161A2E","#2A2F4A","#A9B8F5","#2E2A12","#F2CC3D"]]
+ ["delft","Gent",["#F6F7FB","#FFFFFF","#DDE2EE","#2646A6","#E8EDF9","#7C93D6"],["#0C1120","#141B2E","#263049","#93ACF4","#1A2547","#5B74C2"]],
+ ["pastel","Brugge",["#FDF8FA","#FFFFFF","#F1DFE7","#B04E78","#FCE6EF","#6FBFA6"],["#1B1418","#251C21","#3A2A33","#F2A9C6","#3A2230","#8FD9C1"]],
+ ["lavendel","Leuven",["#F9F7FD","#FFFFFF","#E6E0F3","#6E4FB8","#EEE8FA","#B7A3E8"],["#15121F","#1E1A2B","#302944","#C3B2F5","#2A2245","#8E78D6"]],
+ ["vuur","Luik",["#FFF9F5","#FFFFFF","#F5DED2","#C42F1F","#FFE7D6","#F2791C"],["#1A100D","#241714","#3E2620","#FF8A6B","#3D1C14","#FFA14A"]],
+ ["salie","Mechelen",["#F7F9F6","#FFFFFF","#DDE6DD","#3D6A4C","#E4EEE5","#93B79B"],["#0F1511","#172019","#27352A","#9FD0AE","#1C3022","#6E9C7A"]],
+ ["bos","Hasselt",["#F8FAF3","#FFFFFF","#DFE6CF","#2D6526","#EDF5D4","#9DC23A"],["#0E140C","#161F13","#283622","#B4DC6A","#1E3017","#7FA82E"]],
+ ["munt","Kortrijk",["#F4FBF9","#FFFFFF","#D3EAE4","#0F7362","#DDF4EE","#5CCFB1"],["#0B1513","#13201D","#223833","#7FE0C7","#123029","#3FB596"]],
+ ["oceaan","Oostende",["#F5F9FA","#FFFFFF","#D6E6E9","#0E6874","#DCEFF1","#EE7F68"],["#0B1417","#121E22","#21363C","#74CBD6","#123139","#F59A86"]],
+ ["pruim","Brussel",["#FAF7F8","#FFFFFF","#EADDE4","#6E2A5F","#F7EBD5","#C4952A"],["#160F14","#20161D","#3A2833","#E3A6D2","#3A2230","#E2B64F"]],
+ ["citroen","Antwerpen",["#FAFAF4","#FFFFFF","#E5E4D2","#1F2E6B","#FFF3B8","#DDAE00"],["#0E1020","#161A2E","#2A2F4A","#A9B8F5","#2E2A12","#F2CC3D"]]
 ];
 const TKEYS = ["paper","surface","line","delft","delft-soft","accent2"];
 let themeId = store.get("palette","delft");
