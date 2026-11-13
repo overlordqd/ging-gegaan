@@ -33,8 +33,17 @@
 }
 *{box-sizing:border-box}
 body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;
-  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
-.app{max-width:580px;margin:0 auto;display:flex;flex-direction:column;gap:24px}
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 0;
+  min-height:100%;display:flex;flex-direction:column}
+html{height:100%}
+.app{max-width:580px;width:100%;margin:0 auto;display:flex;flex-direction:column;gap:24px;flex:1}
+.site-foot{margin-top:56px;margin-left:calc(-1 * max(16px,env(safe-area-inset-left,0px)));margin-right:calc(-1 * max(16px,env(safe-area-inset-right,0px)));
+  background:var(--ink);color:var(--paper);padding-block:22px calc(22px + env(safe-area-inset-bottom,0px));
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.site-foot .in{max-width:580px;margin:0 auto;display:flex;justify-content:space-between;align-items:baseline;gap:8px 16px;flex-wrap:wrap}
+.site-foot .made{font-family:var(--f-display);font-size:17px}
+.site-foot .made i{font-style:italic}
+.site-foot .ver{font-family:var(--f-mono);font-size:12px;letter-spacing:.06em;opacity:.7}
 button,input,select{font:inherit;color:inherit}
 button{cursor:pointer}
 :focus-visible{outline:2px solid var(--delft);outline-offset:2px}
@@ -203,6 +212,9 @@ td .tile .orn{display:none}
   </div>
   <main id="view"></main>
 </div>
+<footer class="site-foot">
+  <div class="in"><span class="made">Made by <i>Batu</i> &amp; <i>Claude</i></span><span class="ver">2026 · v0.1</span></div>
+</footer>
 
 <script>
 /* [infinitief, English, imperfectum enkelvoud, imperfectum meervoud, hulpwerkwoord (h=heeft, z=is, hz/zh=both), voltooid deelwoord, klankpatroon, icoon] */
