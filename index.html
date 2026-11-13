@@ -45,6 +45,12 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .brand{display:flex;align-items:baseline;gap:10px}
 .brand h1{margin:0;font-family:var(--f-display);font-weight:600;font-size:24px;letter-spacing:-.01em}
 .brand h1 i{font-style:italic;font-weight:400;color:var(--delft)}
+.brand{gap:12px}
+.flag{display:inline-flex;gap:3px;transform:skewX(-16deg);transform-origin:bottom}
+.flag span{width:8px;height:18px;border-radius:2px}
+.flag span:nth-child(1){background:#000;box-shadow:inset 0 0 0 1px var(--line)}
+.flag span:nth-child(2){background:#FDDA24}
+.flag span:nth-child(3){background:#EF3340}
 .progress{color:var(--muted)}
 .progress b{color:var(--ink);font-weight:500}
 nav{display:flex;gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:4px}
@@ -182,7 +188,7 @@ td .tile .orn{display:none}
 <body>
 <div class="app">
   <header>
-    <div class="brand"><h1>ging <i>gegaan</i></h1></div>
+    <div class="brand"><h1>ging <i>gegaan</i></h1><span class="flag" aria-hidden="true"><span></span><span></span><span></span></span></div>
     <div class="head-right">
       <nav aria-label="Modus">
         <button id="tab-cards" data-tab="cards" aria-pressed="true">Kaarten</button>
