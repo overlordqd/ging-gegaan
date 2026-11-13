@@ -1,0 +1,703 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ging Gegaan</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<style>
+/* Layout: one narrow centred column; a Delft tile carries each verb, everything else stays quiet around it. */
+:root{
+  --paper:#F6F7FB; --surface:#FFFFFF; --ink:#131A2C; --muted:#5B6479; --line:#DDE2EE;
+  --delft:#2646A6; --delft-soft:#E8EDF9; --good:#1E7A54; --good-soft:#E3F3EB; --bad:#B23A30; --bad-soft:#FBEAE8;
+  --f-display:"Fraunces",Georgia,"Times New Roman",serif;
+  --f-body:"Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  --r:14px;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --paper:#0C1120; --surface:#141B2E; --ink:#E7EBF5; --muted:#97A1B8; --line:#263049;
+    --delft:#93ACF4; --delft-soft:#1A2547; --good:#5DC596; --good-soft:#12301F; --bad:#F2897F; --bad-soft:#3A1916;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --paper:#0C1120; --surface:#141B2E; --ink:#E7EBF5; --muted:#97A1B8; --line:#263049;
+  --delft:#93ACF4; --delft-soft:#1A2547; --good:#5DC596; --good-soft:#12301F; --bad:#F2897F; --bad-soft:#3A1916;
+}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.app{max-width:580px;margin:0 auto;display:flex;flex-direction:column;gap:24px}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--delft);outline-offset:2px}
+.mono{font-family:var(--f-mono);font-size:12px;letter-spacing:.04em}
+
+/* header */
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:baseline;gap:10px}
+.brand h1{margin:0;font-family:var(--f-display);font-weight:600;font-size:24px;letter-spacing:-.01em}
+.brand h1 i{font-style:italic;font-weight:400;color:var(--delft)}
+.progress{color:var(--muted)}
+.progress b{color:var(--ink);font-weight:500}
+nav{display:flex;gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:4px}
+nav button{border:0;background:none;padding:6px 14px;border-radius:999px;color:var(--muted);font-weight:500}
+nav button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.bar{height:3px;background:var(--line);border-radius:3px;overflow:hidden}
+.bar span{display:block;height:100%;background:var(--delft);transition:width .4s}
+
+/* toolbar */
+.tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.tools label{color:var(--muted)}
+select,.ghost,input[type="search"]{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:7px 10px}
+.ghost{display:inline-flex;align-items:center;gap:6px}
+.ghost svg{width:16px;height:16px}
+.ghost[aria-pressed="true"]{border-color:var(--delft);color:var(--delft)}
+.spacer{flex:1}
+
+/* tile */
+.tile{position:relative;width:var(--ts,168px);aspect-ratio:1;max-width:100%;color:var(--delft);background:var(--delft-soft);border-radius:6px;display:grid;place-items:center;flex:none}
+.tile>svg.orn{position:absolute;inset:0;width:100%;height:100%}
+.tile .ic{display:grid;place-items:center}
+.tile .ic svg{width:calc(var(--ts,168px)*.48);height:calc(var(--ts,168px)*.48)}
+.tile .fallback{font-family:var(--f-display);font-size:calc(var(--ts,168px)*.4)}
+
+/* flashcard */
+.stage{perspective:1400px}
+.card{display:grid;transform-style:preserve-3d;transition:transform .55s cubic-bezier(.3,.7,.2,1);cursor:pointer;border:0;background:none;padding:0;width:100%;text-align:inherit}
+.card.flipped{transform:rotateY(180deg)}
+.face{grid-area:1/1;backface-visibility:hidden;-webkit-backface-visibility:hidden;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  padding:32px 24px 24px;display:flex;flex-direction:column;align-items:center;gap:16px;min-height:400px}
+.back{transform:rotateY(180deg)}
+.inf{font-family:var(--f-display);font-size:clamp(36px,9vw,48px);font-weight:400;line-height:1.05;letter-spacing:-.015em;margin:4px 0 0;text-align:center}
+.en{color:var(--muted);margin:-8px 0 0}
+.tag{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:3px 10px;white-space:nowrap}
+.hint{margin-top:auto;color:var(--muted);font-size:13px}
+.known-dot{position:absolute;top:14px;right:14px;font-family:var(--f-mono);font-size:11px;color:var(--good);display:flex;gap:4px;align-items:center}
+.face{position:relative}
+.back .head{display:flex;align-items:center;gap:14px;align-self:stretch}
+.back .head .inf{font-size:30px;margin:0;text-align:left}
+.back .head .en{margin:0}
+.forms{align-self:stretch;display:grid;gap:0;margin-top:4px}
+.form{display:grid;grid-template-columns:1fr auto;align-items:baseline;gap:12px;padding:14px 0;border-top:1px solid var(--line)}
+.form .lbl{display:flex;flex-direction:column}
+.form .lbl b{font-weight:500}
+.form .lbl span{font-size:13px;color:var(--muted)}
+.form .val{font-family:var(--f-display);font-size:26px;text-align:right}
+.form .val small{font-family:var(--f-body);font-size:15px;color:var(--muted);margin-right:6px}
+.form .val .alt{display:block;font-family:var(--f-body);font-size:12px;color:var(--muted)}
+
+.controls{display:grid;grid-template-columns:auto 1fr 1fr auto;gap:8px;align-items:stretch}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:12px 14px;font-weight:500;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn svg{width:18px;height:18px}
+.btn.primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.btn.good{color:var(--good)}
+.btn.bad{color:var(--bad)}
+.btn:disabled{opacity:.4;cursor:default}
+.counter{text-align:center;color:var(--muted)}
+.keys{color:var(--muted);font-size:12px;text-align:center}
+kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px;background:var(--surface)}
+
+.empty{background:var(--surface);border:1px dashed var(--line);border-radius:var(--r);padding:48px 24px;text-align:center;display:flex;flex-direction:column;gap:12px;align-items:center}
+.empty h2{font-family:var(--f-display);font-weight:400;margin:0;font-size:26px}
+.empty p{margin:0;color:var(--muted)}
+
+/* quiz */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:24px;display:flex;flex-direction:column;gap:20px}
+.panel h2{font-family:var(--f-display);font-weight:400;font-size:28px;margin:0;text-wrap:balance}
+.panel p{margin:0;color:var(--muted)}
+.choices{display:flex;gap:8px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:none;border-radius:999px;padding:7px 14px}
+.chip[aria-pressed="true"]{border-color:var(--delft);background:var(--delft-soft);color:var(--delft);font-weight:500}
+.chip.right{border-color:var(--good);background:var(--good-soft);color:var(--good);font-weight:500}
+.chip.wrong{border-color:var(--bad);background:var(--bad-soft);color:var(--bad);text-decoration:line-through}
+.chip:disabled{cursor:default}
+.type-line{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+.field-group{display:flex;flex-direction:column;gap:8px}
+.field-group>.mono{color:var(--muted);text-transform:uppercase}
+.q-head{display:flex;gap:18px;align-items:center}
+.q-head .inf{font-size:38px;text-align:left;margin:0}
+.q-head .en{margin:2px 0 0}
+.q-meta{display:flex;justify-content:space-between;color:var(--muted)}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{display:flex;justify-content:space-between;gap:8px;font-weight:500}
+.field label span{font-weight:400;color:var(--muted);font-size:13px}
+.field input{border:1px solid var(--line);background:var(--paper);border-radius:10px;padding:11px 12px;font-family:var(--f-display);font-size:20px;width:100%}
+.field input::placeholder{font-family:var(--f-body);font-size:14px;color:var(--muted);opacity:.8}
+.field.ok input{border-color:var(--good);background:var(--good-soft)}
+.field.no input{border-color:var(--bad);background:var(--bad-soft);text-decoration:line-through;text-decoration-color:var(--bad)}
+.fix{font-size:14px;color:var(--bad);display:flex;gap:6px;align-items:baseline}
+.fix b{font-family:var(--f-display);font-size:18px;font-weight:400;color:var(--ink)}
+.score{font-family:var(--f-display);font-size:64px;line-height:1;margin:0}
+.score small{font-size:24px;color:var(--muted)}
+.misses{display:flex;flex-direction:column}
+.miss{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.miss .forms-inline{font-size:14px;color:var(--muted)}
+.miss .forms-inline b{color:var(--ink);font-weight:500}
+.row-btns{display:flex;gap:8px;flex-wrap:wrap}
+.row-btns .btn{flex:1}
+
+/* list */
+.table-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+table{border-collapse:collapse;width:100%;min-width:520px}
+th{text-align:left;font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:400;padding:12px 10px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface)}
+td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+tbody tr{cursor:pointer}
+tbody tr:hover td{background:var(--delft-soft)}
+td.v{font-family:var(--f-display);font-size:17px}
+td.v span{display:block;font-family:var(--f-body);font-size:12px;color:var(--muted)}
+td .tile{--ts:34px;border-radius:4px}
+td .tile .orn{display:none}
+.chk{color:var(--good)}
+.chk svg{width:16px;height:16px}
+.note{color:var(--muted);font-size:13px}
+
+@media (max-width:460px){
+  .controls{grid-template-columns:1fr 1fr}
+  .controls .nav-prev{order:3}.controls .nav-next{order:4}
+  .face{min-height:380px;padding:28px 18px 20px}
+  .form .val{font-size:22px}
+  .q-head .inf{font-size:30px}
+  .q-head .tile{--ts:84px !important}
+}
+@media (prefers-reduced-motion:reduce){.card{transition:none}.bar span{transition:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand"><h1>ging <i>gegaan</i></h1></div>
+    <nav aria-label="Modus">
+      <button id="tab-cards" data-tab="cards" aria-pressed="true">Kaarten</button>
+      <button id="tab-quiz" data-tab="quiz" aria-pressed="false">Quiz</button>
+      <button id="tab-list" data-tab="list" aria-pressed="false">Lijst</button>
+    </nav>
+  </header>
+  <div style="display:flex;flex-direction:column;gap:6px">
+    <div class="progress mono" id="progress"></div>
+    <div class="bar"><span id="bar"></span></div>
+  </div>
+  <main id="view"></main>
+</div>
+
+<script>
+/* [infinitief, English, imperfectum enkelvoud, imperfectum meervoud, hulpwerkwoord (h=heeft, z=is, hz/zh=both), voltooid deelwoord, klankpatroon, icoon] */
+const RAW = [
+ ["beginnen","to begin","begon","begonnen","z","begonnen","C","play"],
+ ["begrijpen","to understand","begreep","begrepen","h","begrepen","A","lightbulb"],
+ ["bewegen","to move","bewoog","bewogen","h","bewogen","B","move"],
+ ["bieden","to offer","bood","boden","h","geboden","B","hand-platter"],
+ ["bijten","to bite","beet","beten","h","gebeten","A","cookie"],
+ ["binden","to tie, bind","bond","bonden","h","gebonden","C","ribbon"],
+ ["blijken","to turn out","bleek","bleken","z","gebleken","A","scan-search"],
+ ["blijven","to stay","bleef","bleven","z","gebleven","A","anchor"],
+ ["breken","to break","brak","braken","hz","gebroken","D","egg"],
+ ["brengen","to bring","bracht","brachten","h","gebracht","I","package"],
+ ["buigen","to bend","boog","bogen","h","gebogen","B","spline"],
+ ["denken","to think","dacht","dachten","h","gedacht","I","brain"],
+ ["doen","to do","deed","deden","h","gedaan","K","wrench"],
+ ["dragen","to carry, wear","droeg","droegen","h","gedragen","G","briefcase"],
+ ["drinken","to drink","dronk","dronken","h","gedronken","C","glass-water"],
+ ["dwingen","to force","dwong","dwongen","h","gedwongen","C","shrink"],
+ ["eten","to eat","at","aten","h","gegeten","E","utensils"],
+ ["gaan","to go","ging","gingen","z","gegaan","K","signpost"],
+ ["genieten","to enjoy","genoot","genoten","h","genoten","B","ice-cream-cone"],
+ ["geven","to give","gaf","gaven","h","gegeven","E","gift"],
+ ["glijden","to slide","gleed","gleden","hz","gegleden","A","mountain-snow"],
+ ["hangen","to hang","hing","hingen","h","gehangen","H","lamp-ceiling"],
+ ["hebben","to have","had","hadden","h","gehad","K","backpack"],
+ ["helpen","to help","hielp","hielpen","h","geholpen","H","hand-helping"],
+ ["houden","to hold; (van) to love","hield","hielden","h","gehouden","H","heart"],
+ ["kiezen","to choose","koos","kozen","h","gekozen","B","vote"],
+ ["kijken","to look","keek","keken","h","gekeken","A","eye"],
+ ["klimmen","to climb","klom","klommen","hz","geklommen","C","mountain"],
+ ["komen","to come","kwam","kwamen","z","gekomen","K","map-pin"],
+ ["kopen","to buy","kocht","kochten","h","gekocht","I","shopping-cart"],
+ ["verkopen","to sell","verkocht","verkochten","h","verkocht","I","store"],
+ ["genezen","to heal, cure","genas","genazen","hz","genezen","E","bandage"],
+ ["krijgen","to get, receive","kreeg","kregen","h","gekregen","A","inbox"],
+ ["kunnen","can, to be able","kon","konden","h","gekund","K","biceps-flexed"],
+ ["lachen","to laugh","lachte","lachten","h","gelachen","J","laugh"],
+ ["laten","to let, leave","liet","lieten","h","gelaten","H","lock-open"],
+ ["lezen","to read","las","lazen","h","gelezen","E","book-open"],
+ ["liegen","to lie (untruth)","loog","logen","h","gelogen","B","venetian-mask"],
+ ["liggen","to lie (down)","lag","lagen","h","gelegen","E","sofa"],
+ ["lopen","to walk","liep","liepen","hz","gelopen","H","footprints"],
+ ["moeten","must, to have to","moest","moesten","h","gemoeten","K","list-checks"],
+ ["mogen","may, to be allowed","mocht","mochten","h","gemogen","I","circle-check"],
+ ["nemen","to take","nam","namen","h","genomen","D","grab"],
+ ["rijden","to ride, drive","reed","reden","hz","gereden","A","car"],
+ ["roepen","to call, shout","riep","riepen","h","geroepen","H","megaphone"],
+ ["ruiken","to smell","rook","roken","h","geroken","B","flower"],
+ ["scheiden","to separate, divorce","scheidde","scheidden","hz","gescheiden","J","split"],
+ ["schieten","to shoot","schoot","schoten","h","geschoten","B","crosshair"],
+ ["schijnen","to shine; to seem","scheen","schenen","h","geschenen","A","sun"],
+ ["schrijven","to write","schreef","schreven","h","geschreven","A","pen-line"],
+ ["schrikken","to be startled","schrok","schrokken","z","geschrokken","C","ghost"],
+ ["slaan","to hit","sloeg","sloegen","h","geslagen","G","gavel"],
+ ["slapen","to sleep","sliep","sliepen","h","geslapen","H","bed"],
+ ["sluiten","to close","sloot","sloten","h","gesloten","B","lock"],
+ ["snijden","to cut","sneed","sneden","h","gesneden","A","scissors"],
+ ["spreken","to speak","sprak","spraken","h","gesproken","D","message-circle"],
+ ["springen","to jump","sprong","sprongen","hz","gesprongen","C","rabbit"],
+ ["staan","to stand","stond","stonden","h","gestaan","K","person-standing"],
+ ["steken","to sting, stab; to cross","stak","staken","h","gestoken","D","syringe"],
+ ["stelen","to steal","stal","stalen","h","gestolen","D","key-round"],
+ ["sterven","to die","stierf","stierven","z","gestorven","K","skull"],
+ ["stijgen","to rise","steeg","stegen","z","gestegen","A","rocket"],
+ ["trekken","to pull","trok","trokken","h","getrokken","F","magnet"],
+ ["vallen","to fall","viel","vielen","z","gevallen","H","leaf"],
+ ["vangen","to catch","ving","vingen","h","gevangen","H","fish"],
+ ["varen","to sail","voer","voeren","hz","gevaren","G","sailboat"],
+ ["vechten","to fight","vocht","vochten","h","gevochten","F","swords"],
+ ["verbieden","to forbid","verbood","verboden","h","verboden","B","ban"],
+ ["verdwijnen","to disappear","verdween","verdwenen","z","verdwenen","A","eye-off"],
+ ["vergeten","to forget","vergat","vergaten","zh","vergeten","E","eraser"],
+ ["verliezen","to lose","verloor","verloren","h","verloren","B","heart-crack"],
+ ["vinden","to find; to think","vond","vonden","h","gevonden","C","gem"],
+ ["vliegen","to fly","vloog","vlogen","hz","gevlogen","B","bird"],
+ ["vragen","to ask","vroeg","vroegen","h","gevraagd","G","message-circle-question"],
+ ["vriezen","to freeze","vroor","vroren","h","gevroren","B","snowflake"],
+ ["wassen","to wash","waste","wasten","h","gewassen","J","washing-machine"],
+ ["wegen","to weigh","woog","wogen","h","gewogen","B","weight"],
+ ["weten","to know","wist","wisten","h","geweten","K","glasses"],
+ ["wijzen","to point","wees","wezen","h","gewezen","A","pointer"],
+ ["willen","to want","wilde/wou","wilden","h","gewild","K","sparkles"],
+ ["winnen","to win","won","wonnen","h","gewonnen","C","trophy"],
+ ["worden","to become","werd","werden","z","geworden","K","sprout"],
+ ["zeggen","to say","zei","zeiden","h","gezegd","K","quote"],
+ ["zenden","to send","zond","zonden","h","gezonden","F","send"],
+ ["zien","to see","zag","zagen","h","gezien","K","scan-eye"],
+ ["zijn","to be","was","waren","z","geweest","K","circle-user"],
+ ["zingen","to sing","zong","zongen","h","gezongen","C","mic-vocal"],
+ ["zitten","to sit","zat","zaten","h","gezeten","E","armchair"],
+ ["zoeken","to search","zocht","zochten","h","gezocht","I","search"],
+ ["zwemmen","to swim","zwom","zwommen","hz","gezwommen","C","waves"],
+ ["zwijgen","to be silent","zweeg","zwegen","h","gezwegen","A","volume-x"],
+ ["bakken","to bake, fry","bakte","bakten","h","gebakken","J","chef-hat"]
+];
+/* Regelmatig: [infinitief, English, imperfectum enkelvoud, hulpwerkwoord, voltooid deelwoord, icoon]. Meervoud = enkelvoud + n. */
+const REG = [
+ ["antwoorden","to answer","antwoordde","h","geantwoord","reply"],
+ ["bellen","to call (phone)","belde","h","gebeld","phone"],
+ ["bestellen","to order","bestelde","h","besteld","receipt"],
+ ["betalen","to pay","betaalde","h","betaald","credit-card"],
+ ["betekenen","to mean","betekende","h","betekend","languages"],
+ ["bouwen","to build","bouwde","h","gebouwd","building-2"],
+ ["branden","to burn","brandde","h","gebrand","flame"],
+ ["dansen","to dance","danste","h","gedanst","music"],
+ ["douchen","to shower","douchte","h","gedoucht","shower-head"],
+ ["duren","to last (time)","duurde","h","geduurd","clock"],
+ ["fietsen","to cycle","fietste","hz","gefietst","bike"],
+ ["gebeuren","to happen","gebeurde","z","gebeurd","zap"],
+ ["gebruiken","to use","gebruikte","h","gebruikt","plug"],
+ ["geloven","to believe","geloofde","h","geloofd","church"],
+ ["groeien","to grow","groeide","z","gegroeid","tree-deciduous"],
+ ["herhalen","to repeat","herhaalde","h","herhaald","repeat"],
+ ["hopen","to hope","hoopte","h","gehoopt","clover"],
+ ["horen","to hear","hoorde","h","gehoord","headphones"],
+ ["huilen","to cry","huilde","h","gehuild","droplets"],
+ ["huren","to rent","huurde","h","gehuurd","key"],
+ ["kloppen","to knock; to be right","klopte","h","geklopt","door-closed"],
+ ["koken","to cook","kookte","h","gekookt","cooking-pot"],
+ ["leggen","to lay, put down","legde","h","gelegd","layers"],
+ ["lenen","to borrow, lend","leende","h","geleend","hand-coins"],
+ ["leren","to learn, teach","leerde","h","geleerd","notebook-pen"],
+ ["leven","to live (be alive)","leefde","h","geleefd","heart-pulse"],
+ ["luisteren","to listen","luisterde","h","geluisterd","ear"],
+ ["maken","to make","maakte","h","gemaakt","hammer"],
+ ["missen","to miss","miste","h","gemist","frown"],
+ ["noemen","to name, call","noemde","h","genoemd","tag"],
+ ["oefenen","to practise","oefende","h","geoefend","pencil-ruler"],
+ ["ontmoeten","to meet","ontmoette","h","ontmoet","handshake"],
+ ["openen","to open","opende","h","geopend","door-open"],
+ ["plannen","to plan","plande","h","gepland","calendar"],
+ ["poetsen","to polish, brush","poetste","h","gepoetst","brush"],
+ ["praten","to talk","praatte","h","gepraat","messages-square"],
+ ["proberen","to try","probeerde","h","geprobeerd","target"],
+ ["regenen","to rain","regende","h","geregend","cloud-rain"],
+ ["reizen","to travel","reisde","hz","gereisd","luggage"],
+ ["rennen","to run","rende","hz","gerend","gauge"],
+ ["rusten","to rest","rustte","h","gerust","tree-palm"],
+ ["spelen","to play","speelde","h","gespeeld","gamepad-2"],
+ ["sporten","to work out","sportte","h","gesport","dumbbell"],
+ ["stoppen","to stop","stopte","hz","gestopt","circle-stop"],
+ ["studeren","to study","studeerde","h","gestudeerd","graduation-cap"],
+ ["tekenen","to draw","tekende","h","getekend","pencil"],
+ ["tellen","to count","telde","h","geteld","calculator"],
+ ["trouwen","to marry","trouwde","z","getrouwd","heart-handshake"],
+ ["veranderen","to change","veranderde","hz","veranderd","refresh-cw"],
+ ["verdienen","to earn","verdiende","h","verdiend","banknote"],
+ ["verhuizen","to move house","verhuisde","z","verhuisd","truck"],
+ ["vertellen","to tell","vertelde","h","verteld","message-square-quote"],
+ ["vieren","to celebrate","vierde","h","gevierd","party-popper"],
+ ["wachten","to wait","wachtte","h","gewacht","hourglass"],
+ ["wandelen","to walk, stroll","wandelde","hz","gewandeld","trees"],
+ ["wensen","to wish","wenste","h","gewenst","star"],
+ ["werken","to work","werkte","h","gewerkt","laptop"],
+ ["wonen","to live (reside)","woonde","h","gewoond","house"],
+ ["zetten","to put, set","zette","h","gezet","coffee"],
+ ["zorgen","to take care","zorgde","h","gezorgd","hand-heart"]
+];
+const PATTERNS = {
+  A:"ij · ee · e", B:"ie/ui/e · oo · o", C:"i · o · o", D:"e · a · o", E:"e/i · a · e",
+  F:"e · o · o", G:"a · oe · a", H:"ie/i in verleden tijd", I:"-cht", J:"gemengd", K:"eigen vorm",
+  T:"regelmatig · -te · ge-…-t", D2:"regelmatig · -de · ge-…-d"
+};
+const PATTERN_NOTE = {
+  A:"blijven · bleef · gebleven", B:"kiezen · koos · gekozen", C:"drinken · dronk · gedronken", D:"spreken · sprak · gesproken",
+  E:"geven · gaf · gegeven", F:"trekken · trok · getrokken", G:"dragen · droeg · gedragen", H:"vallen · viel · gevallen",
+  I:"denken · dacht · gedacht", J:"zwakke verleden tijd, sterk deelwoord", K:"onthoud deze los",
+  T:"'t kofschip: stam eindigt op t, k, f, s, ch of p", D2:"elke andere klank; let op: leven → leefde, reizen → reisde"
+};
+const IRR_PATS = ["A","B","C","D","E","F","G","H","I","J","K"], REG_PATS = ["T","D2"];
+const AUX = {h:["heeft"], z:["is"], hz:["heeft","is"], zh:["is","heeft"]};
+const VERBS = [
+  ...RAW.map(([inf,en,sg,pl,aux,part,pat,icon]) => ({inf,en,sg:sg.split("/"),pl:pl.split("/"),aux:AUX[aux],part,pat,icon,reg:false})),
+  ...REG.map(([inf,en,sg,aux,part,icon]) => ({inf,en,sg:[sg],pl:[sg+"n"],aux:AUX[aux],part,pat:sg.endsWith("te")?"T":"D2",icon,reg:true}))
+].sort((a,b)=>a.inf.localeCompare(b.inf,"nl"));
+const IRR_N = RAW.length, REG_N = REG.length;
+const matchF = (v,f) => f==="all" || (f==="irr" && !v.reg) || (f==="reg" && v.reg) || v.pat===f;
+
+/* ---------- storage (per browser, optional) ---------- */
+const store = {
+  get(k,d){ try{ const v = localStorage.getItem("gg-"+k); return v==null?d:JSON.parse(v); }catch(e){ return d; } },
+  set(k,v){ try{ localStorage.setItem("gg-"+k, JSON.stringify(v)); }catch(e){} }
+};
+const known = new Set(store.get("known", []));
+function saveKnown(){ store.set("known",[...known]); renderProgress(); }
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const ORN = `<svg class="orn" viewBox="0 0 100 100" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round">
+  <rect x="4" y="4" width="92" height="92" rx="2" opacity=".28"/>
+  <g opacity=".55">
+    <path d="M4 18a14 14 0 0 0 14-14"/><path d="M4 11a7 7 0 0 0 7-7"/>
+    <path d="M96 18a14 14 0 0 1-14-14"/><path d="M96 11a7 7 0 0 1-7-7"/>
+    <path d="M4 82a14 14 0 0 1 14 14"/><path d="M4 89a7 7 0 0 1 7 7"/>
+    <path d="M96 82a14 14 0 0 0-14 14"/><path d="M96 89a7 7 0 0 0-7 7"/>
+  </g>
+  <g fill="currentColor" stroke="none" opacity=".55"><circle cx="50" cy="8" r="1.2"/><circle cx="50" cy="92" r="1.2"/><circle cx="8" cy="50" r="1.2"/><circle cx="92" cy="50" r="1.2"/></g>
+</svg>`;
+function tile(v, size){
+  return `<div class="tile" style="--ts:${size}px">${ORN}<span class="ic" data-fb="${esc(v.inf[0])}"><i data-lucide="${v.icon}"></i></span></div>`;
+}
+function drawIcons(){
+  if (window.lucide && lucide.createIcons) {
+    try { lucide.createIcons({attrs:{"stroke-width":1.35}}); } catch(e){}
+  }
+  document.querySelectorAll(".ic").forEach(el=>{
+    if (!el.querySelector("svg")) el.innerHTML = `<span class="fallback">${el.dataset.fb}</span>`;
+  });
+  document.querySelectorAll("i[data-lucide]").forEach(el=>{ if(!window.lucide) el.remove(); });
+}
+function perf(v, i=0){ return `${v.aux[i]} ${v.part}`; }
+function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+const norm = s => s.toLowerCase().replace(/\s+/g," ").trim();
+function patternOptions(sel){
+  const o = keys => keys.map(k=>`<option value="${k}" ${sel===k?"selected":""}>${PATTERNS[k]}</option>`).join("");
+  return `<optgroup label="Onregelmatig: klankpatroon">${o(IRR_PATS)}</optgroup><optgroup label="Regelmatig: uitgang">${o(REG_PATS)}</optgroup>`;
+}
+const opt = (val,label,sel) => `<option value="${val}" ${sel===val?"selected":""}>${label}</option>`;
+
+/* ---------- progress ---------- */
+function renderProgress(){
+  const ki = VERBS.filter(v=>!v.reg && known.has(v.inf)).length, kr = VERBS.filter(v=>v.reg && known.has(v.inf)).length;
+  $("#progress").innerHTML = `Gekend: <b>${ki}</b> / ${IRR_N} onregelmatig &nbsp;·&nbsp; <b>${kr}</b> / ${REG_N} regelmatig`;
+  $("#bar").style.width = ((ki+kr)/VERBS.length*100)+"%";
+}
+
+/* ---------- state ---------- */
+const S = {
+  tab: store.get("tab","cards"),
+  cards: { filter: store.get("filter","irr"), shuffled:false, deck:[], pos:0, flipped:false },
+  quiz: { phase:"setup", size: [10,20,40,0].includes(store.get("qsize",10)) ? store.get("qsize",10) : 10, source:"all",
+          kind: store.get("qkind","irr"), meaning: store.get("qmean",true), opts:[], pick:null,
+          queue:[], i:0, right:0, misses:[], result:null },
+  list: { q:"", pat:"all" }
+};
+
+/* ---------- cards ---------- */
+function buildDeck(keepInf){
+  const f = S.cards.filter;
+  let d = VERBS.filter(v => f==="learn" ? !known.has(v.inf) : matchF(v,f));
+  if (S.cards.shuffled) d = shuffle(d);
+  S.cards.deck = d;
+  const idx = keepInf ? d.findIndex(v=>v.inf===keepInf) : -1;
+  S.cards.pos = idx>=0 ? idx : 0;
+  S.cards.flipped = false;
+}
+function renderCards(){
+  const C = S.cards, v = C.deck[C.pos];
+  const toolbar = `<div class="tools">
+      <label for="deck-filter" class="mono">Stapel</label>
+      <select id="deck-filter">
+        ${opt("irr",`Onregelmatig (${IRR_N})`,C.filter)}
+        ${opt("reg",`Regelmatig (${REG_N})`,C.filter)}
+        ${opt("all",`Alles (${VERBS.length})`,C.filter)}
+        ${opt("learn",`Nog te leren (${VERBS.length - VERBS.filter(x=>known.has(x.inf)).length})`,C.filter)}
+        ${patternOptions(C.filter)}
+      </select>
+      <span class="spacer"></span>
+      <button class="ghost" id="shuffle" aria-pressed="${C.shuffled}"><i data-lucide="shuffle"></i>Schudden</button>
+    </div>`;
+  if (!v){
+    $("#view").innerHTML = toolbar + `<div class="empty" style="margin-top:16px">
+      <h2>Alles gekend</h2><p>Je kent elk werkwoord in deze stapel. Kies een andere stapel of test jezelf met de quiz.</p>
+      <button class="btn primary" id="go-quiz">Naar de quiz</button></div>`;
+    $("#go-quiz").onclick = ()=>setTab("quiz");
+    bindToolbar(); drawIcons(); return;
+  }
+  const isKnown = known.has(v.inf);
+  const altAux = v.aux.length>1 ? `<span class="alt">ook: ${v.aux[1]} ${v.part}</span>` : "";
+  const altSg = v.sg.length>1 ? `<span class="alt">ook: ${v.sg.slice(1).join(", ")}</span>` : "";
+  $("#view").innerHTML = toolbar + `
+    <div style="display:flex;flex-direction:column;gap:14px;margin-top:16px">
+    <div class="stage">
+      <button class="card ${C.flipped?"flipped":""}" id="card" aria-label="Kaart omdraaien: ${esc(v.inf)}">
+        <div class="face front" aria-hidden="${C.flipped}">
+          ${isKnown?`<span class="known-dot"><i data-lucide="check" style="width:13px;height:13px"></i>gekend</span>`:""}
+          ${tile(v,168)}
+          <p class="inf">${v.inf}</p>
+          <p class="en">${esc(v.en)}</p>
+          <span class="tag">${PATTERNS[v.pat]}</span>
+          <span class="hint">Tik om om te draaien</span>
+        </div>
+        <div class="face back" aria-hidden="${!C.flipped}">
+          <div class="head">${tile(v,64)}<div><p class="inf">${v.inf}</p><p class="en">${esc(v.en)}</p></div></div>
+          <div class="forms">
+            <div class="form"><div class="lbl"><b>Imperfectum</b><span>ik · jij · hij</span></div><div class="val">${v.sg[0]}${altSg}</div></div>
+            <div class="form"><div class="lbl"><b>Imperfectum</b><span>wij · jullie · zij</span></div><div class="val">${v.pl[0]}</div></div>
+            <div class="form"><div class="lbl"><b>Perfectum</b><span>hij / zij</span></div><div class="val"><small>${v.aux[0]}</small>${v.part}${altAux}</div></div>
+          </div>
+          <span class="tag" title="${esc(PATTERN_NOTE[v.pat])}">${PATTERNS[v.pat]} &nbsp;·&nbsp; ${esc(PATTERN_NOTE[v.pat])}</span>
+        </div>
+      </button>
+    </div>
+    <div class="controls">
+      <button class="btn nav-prev" id="prev" aria-label="Vorige" ${C.pos===0?"disabled":""}><i data-lucide="arrow-left"></i></button>
+      <button class="btn bad" id="again"><i data-lucide="rotate-ccw"></i>Nog oefenen</button>
+      <button class="btn good" id="gotit"><i data-lucide="check"></i>Ken ik</button>
+      <button class="btn nav-next" id="next" aria-label="Volgende" ${C.pos>=C.deck.length-1?"disabled":""}><i data-lucide="arrow-right"></i></button>
+    </div>
+    <div class="counter mono">${C.pos+1} / ${C.deck.length}</div>
+    <div class="keys"><kbd>spatie</kbd> omdraaien &nbsp; <kbd>←</kbd> <kbd>→</kbd> bladeren &nbsp; <kbd>1</kbd> nog oefenen &nbsp; <kbd>2</kbd> ken ik</div>
+    </div>`;
+  $("#card").onclick = flip;
+  $("#prev").onclick = ()=>move(-1);
+  $("#next").onclick = ()=>move(1);
+  $("#again").onclick = ()=>mark(false);
+  $("#gotit").onclick = ()=>mark(true);
+  bindToolbar(); drawIcons();
+}
+function bindToolbar(){
+  $("#deck-filter").onchange = e => { S.cards.filter = e.target.value; store.set("filter", S.cards.filter); buildDeck(); renderCards(); };
+  $("#shuffle").onclick = () => { S.cards.shuffled = !S.cards.shuffled; buildDeck(); renderCards(); };
+}
+function flip(){ S.cards.flipped = !S.cards.flipped; const c=$("#card"); if(c){ c.classList.toggle("flipped", S.cards.flipped);
+  c.querySelector(".front").setAttribute("aria-hidden", S.cards.flipped); c.querySelector(".back").setAttribute("aria-hidden", !S.cards.flipped);} }
+function move(d){ const C=S.cards; const p=C.pos+d; if(p<0||p>=C.deck.length) return; C.pos=p; C.flipped=false; renderCards(); }
+function mark(ok){
+  const C=S.cards, v=C.deck[C.pos]; if(!v) return;
+  if(ok) known.add(v.inf); else known.delete(v.inf);
+  saveKnown();
+  if (C.filter==="learn" && ok){ C.deck.splice(C.pos,1); if(C.pos>=C.deck.length) C.pos=Math.max(0,C.deck.length-1); C.flipped=false; renderCards(); }
+  else if (C.pos < C.deck.length-1) move(1);
+  else { C.flipped=false; renderCards(); }
+}
+
+/* ---------- quiz ---------- */
+function renderQuiz(){
+  const Q = S.quiz;
+  if (Q.phase==="setup") return renderQuizSetup();
+  if (Q.phase==="done") return renderQuizDone();
+  const v = Q.queue[Q.i], r = Q.result;
+  const fld = (id,label,sub,ph,key) => {
+    const st = r ? (r[key].ok?"ok":"no") : "";
+    const fix = r && !r[key].ok ? `<div class="fix">${r[key].msg||"Juist:"} <b>${r[key].want}</b></div>` : "";
+    return `<div class="field ${st}"><label for="${id}">${label}<span>${sub}</span></label>
+      <input id="${id}" lang="nl" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="${ph}" value="${esc(r?r[key].got:"")}" ${r?"readonly":""}>${fix}</div>`;
+  };
+  const hide = Q.meaning && !r;
+  const head = hide
+    ? `<div class="tile" style="--ts:104px">${ORN}<span class="fallback">?</span></div><div><p class="inf">${v.inf}</p><p class="en">Kies hieronder de betekenis</p></div>`
+    : `${tile(v,104)}<div><p class="inf">${v.inf}</p><p class="en">${esc(v.en)}</p></div>`;
+  const mean = Q.meaning ? `<div class="field-group"><span class="mono">Wat betekent het?</span><div class="choices">
+      ${Q.opts.map((o,k)=>{ const st = r ? (o===v.en?"right":(Q.pick===k?"wrong":"")) : "";
+        return `<button type="button" class="chip ${st}" data-k="${k}" aria-pressed="${Q.pick===k}" ${r?"disabled":""}>${esc(o)}</button>`; }).join("")}
+    </div></div>` : "";
+  const typeLine = r ? `<div class="type-line"><span class="tag">${v.reg?"":"onregelmatig · "}${PATTERNS[v.pat]}</span><span class="note">${esc(PATTERN_NOTE[v.pat])}</span></div>` : "";
+  $("#view").innerHTML = `<div class="panel">
+    <div class="q-meta mono"><span>Vraag ${Q.i+1} van ${Q.queue.length}</span><span>${Q.right} goed</span></div>
+    <div class="bar"><span style="width:${(Q.i/Q.queue.length*100)}%"></span></div>
+    <div class="q-head">${head}</div>
+    <form id="qform" style="display:flex;flex-direction:column;gap:16px">
+      ${mean}
+      ${fld("q-sg","Imperfectum","ik · jij · hij","bijv. liep","sg")}
+      ${fld("q-pl","Imperfectum","wij · jullie · zij","bijv. liepen","pl")}
+      ${fld("q-pf","Perfectum","hulpwerkwoord + deelwoord","bijv. heeft gelopen","pf")}
+      ${typeLine}
+      <button class="btn primary" type="submit" id="q-submit">${r ? (Q.i===Q.queue.length-1?"Bekijk resultaat":"Volgende") : "Controleer"} <kbd style="background:none;color:inherit;border-color:currentColor;opacity:.6">enter</kbd></button>
+    </form>
+    ${r ? "" : `<p class="note">Schrijf het perfectum met <b>heeft</b> of <b>is</b>, zoals in <i>hij heeft gelopen</i>.</p>`}
+  </div>`;
+  $("#qform").onsubmit = e => { e.preventDefault(); r ? nextQ() : checkQ(); };
+  document.querySelectorAll("[data-k]").forEach(b => b.onclick = () => {
+    Q.pick = +b.dataset.k;
+    document.querySelectorAll("[data-k]").forEach(x => x.setAttribute("aria-pressed", x===b));
+  });
+  drawIcons();
+  (r ? $("#q-submit") : $("#q-sg")).focus({preventScroll:true});
+}
+function renderQuizSetup(){
+  const Q=S.quiz;
+  const kindPool = VERBS.filter(v => Q.kind==="mix" || (Q.kind==="reg") === v.reg);
+  const learnN = kindPool.filter(v=>!known.has(v.inf)).length;
+  const sizes=[10,20,40,0];
+  const pressed = (a,b) => `aria-pressed="${a===b}"`;
+  $("#view").innerHTML = `<div class="panel">
+    <h2>Test jezelf</h2>
+    <p>Je ziet een werkwoord, kiest wat het betekent en typt drie vormen: het imperfectum enkelvoud, het imperfectum meervoud en het perfectum met hulpwerkwoord. Bij <b>Gemengd</b> moet je zelf herkennen of een werkwoord regelmatig is.</p>
+    <div class="field-group"><span class="mono">Soort</span><div class="choices">
+      <button class="chip" data-kind="irr" ${pressed(Q.kind,"irr")}>Onregelmatig (${IRR_N})</button>
+      <button class="chip" data-kind="reg" ${pressed(Q.kind,"reg")}>Regelmatig (${REG_N})</button>
+      <button class="chip" data-kind="mix" ${pressed(Q.kind,"mix")}>Gemengd (${VERBS.length})</button>
+    </div></div>
+    <div class="field-group"><span class="mono">Aantal vragen</span><div class="choices">
+      ${sizes.map(n=>`<button class="chip" data-size="${n}" ${pressed(Q.size,n)}>${n===0?`Alle ${kindPool.length}`:n}</button>`).join("")}
+    </div></div>
+    <div class="field-group"><span class="mono">Werkwoorden</span><div class="choices">
+      <button class="chip" data-src="all" ${pressed(Q.source,"all")}>Alle</button>
+      <button class="chip" data-src="learn" ${pressed(Q.source,"learn")} ${learnN?"":"disabled"}>Nog te leren (${learnN})</button>
+      <button class="chip" data-src="known" ${pressed(Q.source,"known")}>Al gekend (${kindPool.length-learnN})</button>
+    </div></div>
+    <div class="field-group"><span class="mono">Betekenis</span><div class="choices">
+      <button class="chip" data-mean="1" ${pressed(Q.meaning,true)}>Ook betekenis vragen</button>
+      <button class="chip" data-mean="0" ${pressed(Q.meaning,false)}>Alleen de vormen</button>
+    </div></div>
+    <button class="btn primary" id="q-start">Start de quiz</button>
+    <p class="note">Een vraag is goed als alles klopt. Dan telt het werkwoord als gekend. Een fout zet het terug bij "nog te leren".</p>
+  </div>`;
+  document.querySelectorAll("[data-kind]").forEach(b=>b.onclick=()=>{Q.kind=b.dataset.kind; store.set("qkind",Q.kind); renderQuizSetup();});
+  document.querySelectorAll("[data-size]").forEach(b=>b.onclick=()=>{Q.size=+b.dataset.size; store.set("qsize",Q.size); renderQuizSetup();});
+  document.querySelectorAll("[data-src]").forEach(b=>b.onclick=()=>{Q.source=b.dataset.src; renderQuizSetup();});
+  document.querySelectorAll("[data-mean]").forEach(b=>b.onclick=()=>{Q.meaning=b.dataset.mean==="1"; store.set("qmean",Q.meaning); renderQuizSetup();});
+  $("#q-start").onclick = ()=>startQuiz();
+}
+function startQuiz(list){
+  const Q=S.quiz;
+  let pool = list || VERBS.filter(v => (Q.kind==="mix" || (Q.kind==="reg")===v.reg) &&
+    (Q.source==="all" ? true : Q.source==="learn" ? !known.has(v.inf) : known.has(v.inf)));
+  if (!pool.length){ $("#q-start").textContent = "Deze groep is leeg. Kies een andere."; return; }
+  Q.queue = shuffle(pool).slice(0, list || !Q.size ? pool.length : Q.size);
+  Q.i=0; Q.right=0; Q.misses=[]; Q.result=null; Q.phase="ask";
+  prepQ(); renderQuiz();
+}
+function prepQ(){
+  const Q=S.quiz, v=Q.queue[Q.i];
+  Q.pick = null;
+  const others = shuffle([...new Set(VERBS.filter(x=>x.en!==v.en).map(x=>x.en))]).slice(0,3);
+  Q.opts = shuffle([v.en, ...others]);
+}
+function checkQ(){
+  const Q=S.quiz, v=Q.queue[Q.i];
+  const sg=norm($("#q-sg").value), pl=norm($("#q-pl").value), pf=norm($("#q-pf").value);
+  const res = {
+    sg:{got:$("#q-sg").value, ok:v.sg.includes(sg), want:v.sg.join(" / ")},
+    pl:{got:$("#q-pl").value, ok:v.pl.includes(pl), want:v.pl.join(" / ")},
+    pf:{got:$("#q-pf").value, ok:v.aux.some(a=>pf===`${a} ${v.part}`), want:v.aux.map(a=>`${a} ${v.part}`).join(" / ")}
+  };
+  if (!res.pf.ok && pf===v.part) res.pf.msg = "Vergeet het hulpwerkwoord niet:";
+  else if (!res.pf.ok && pf.endsWith(" "+v.part)) res.pf.msg = "Ander hulpwerkwoord:";
+  const meanOk = !Q.meaning || (Q.pick!=null && Q.opts[Q.pick]===v.en);
+  const all = meanOk && res.sg.ok && res.pl.ok && res.pf.ok;
+  if (all){ Q.right++; known.add(v.inf); } else { Q.misses.push(v); known.delete(v.inf); }
+  saveKnown();
+  Q.result = res; renderQuiz();
+}
+function nextQ(){ const Q=S.quiz; Q.result=null; if (Q.i>=Q.queue.length-1){ Q.phase="done"; } else { Q.i++; prepQ(); } renderQuiz(); }
+function renderQuizDone(){
+  const Q=S.quiz, n=Q.queue.length, pct=Math.round(Q.right/n*100);
+  const verdict = pct===100 ? "Foutloos." : pct>=80 ? "Bijna alles goed." : pct>=50 ? "Op de goede weg." : "Blijf oefenen, het komt.";
+  $("#view").innerHTML = `<div class="panel">
+    <span class="mono" style="color:var(--muted)">RESULTAAT</span>
+    <p class="score">${Q.right}<small> / ${n}</small></p>
+    <h2>${verdict}</h2>
+    ${Q.misses.length ? `<div class="field-group"><span class="mono">Fouten om te herhalen</span><div class="misses">
+      ${Q.misses.map(v=>`<div class="miss">${tile(v,40)}<div><b style="font-family:var(--f-display);font-size:18px;font-weight:400">${v.inf}</b>
+        <div class="forms-inline"><b>${v.sg.join("/")}</b> · <b>${v.pl[0]}</b> · <b>${perf(v)}</b></div></div></div>`).join("")}
+    </div></div>` : ""}
+    <div class="row-btns">
+      ${Q.misses.length ? `<button class="btn primary" id="q-retry">Oefen de fouten (${Q.misses.length})</button>` : ""}
+      <button class="btn" id="q-new">Nieuwe quiz</button>
+    </div>
+  </div>`;
+  if (Q.misses.length) $("#q-retry").onclick = ()=>startQuiz(Q.misses.slice());
+  $("#q-new").onclick = ()=>{ Q.phase="setup"; renderQuiz(); };
+  drawIcons();
+}
+
+/* ---------- list ---------- */
+function renderList(){
+  const L=S.list;
+  $("#view").innerHTML = `<div class="tools">
+      <input type="search" id="l-q" placeholder="Zoek werkwoord of vertaling" value="${esc(L.q)}" style="flex:1;min-width:180px" aria-label="Zoeken">
+      <select id="l-pat" aria-label="Soort of patroon">${opt("all",`Alle werkwoorden (${VERBS.length})`,L.pat)}${opt("irr",`Onregelmatig (${IRR_N})`,L.pat)}${opt("reg",`Regelmatig (${REG_N})`,L.pat)}${patternOptions(L.pat)}</select>
+    </div>
+    <div class="table-wrap" style="margin-top:12px"><table>
+      <thead><tr><th></th><th>Infinitief</th><th>Imperfectum</th><th>Perfectum</th><th></th></tr></thead>
+      <tbody id="l-body"></tbody></table></div>
+    <p class="note" style="margin-top:10px">Tik op een rij om de kaart te openen.</p>`;
+  const fill = () => {
+    const q = norm(L.q);
+    const rows = VERBS.filter(v => matchF(v,L.pat) && (!q || v.inf.includes(q) || v.en.toLowerCase().includes(q) || v.sg.some(s=>s.includes(q)) || v.part.includes(q)));
+    $("#l-body").innerHTML = rows.length ? rows.map(v=>`<tr data-inf="${v.inf}" tabindex="0">
+        <td>${tile(v,34)}</td>
+        <td class="v">${v.inf}<span>${esc(v.en)}</span></td>
+        <td class="v">${v.sg.join(" / ")}<span>${v.pl[0]}</span></td>
+        <td class="v">${v.part}<span>${v.aux.join(" / ")}</span></td>
+        <td class="chk">${known.has(v.inf)?'<i data-lucide="check" aria-label="gekend"></i>':""}</td></tr>`).join("")
+      : `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:28px">Geen werkwoord gevonden voor "${esc(L.q)}".</td></tr>`;
+    document.querySelectorAll("#l-body tr[data-inf]").forEach(tr=>{
+      const open=()=>{ S.cards.filter="all"; store.set("filter","all"); buildDeck(tr.dataset.inf); setTab("cards"); };
+      tr.onclick=open; tr.onkeydown=e=>{ if(e.key==="Enter") open(); };
+    });
+    drawIcons();
+  };
+  $("#l-q").oninput = e => { L.q=e.target.value; fill(); };
+  $("#l-pat").onchange = e => { L.pat=e.target.value; fill(); };
+  fill();
+}
+
+/* ---------- tabs & keys ---------- */
+function setTab(t){
+  S.tab=t; store.set("tab",t);
+  document.querySelectorAll("nav button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.tab===t));
+  ({cards:renderCards, quiz:renderQuiz, list:renderList})[t]();
+}
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
+document.addEventListener("keydown", e=>{
+  if (S.tab!=="cards" || /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
+  if (e.key===" "){ if (e.target.tagName==="BUTTON") return; e.preventDefault(); flip(); }
+  else if (e.key==="ArrowRight") move(1);
+  else if (e.key==="ArrowLeft") move(-1);
+  else if (e.key==="1") mark(false);
+  else if (e.key==="2") mark(true);
+});
+
+buildDeck();
+renderProgress();
+setTab(["cards","quiz","list"].includes(S.tab) ? S.tab : "cards");
+</script>
+
+</body>
+</html>
