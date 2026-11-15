@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Ging Gegaan</title>
 <meta name="claude:viewport-fit-sides" content="cover">
+<meta name="theme-color" content="#F6F7FB">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Ging Gegaan">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -32,10 +37,10 @@
   --delft:#93ACF4; --delft-soft:#1A2547; --accent2:#5B74C2; --flag-k:#5A5A5A; --flag-o:.5; --logo-shadow:0 1px 2px rgb(0 0 0 / .65),0 4px 14px rgb(0 0 0 / .55); --good:#5DC596; --good-soft:#12301F; --bad:#F2897F; --bad-soft:#3A1916;
 }
 *{box-sizing:border-box}
-body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;
-  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 0;
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-top:max(20px,calc(env(safe-area-inset-top,0px) + 8px));padding-bottom:0;
   min-height:100%;display:flex;flex-direction:column}
-html{height:100%}
+html{height:100%;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .app{max-width:580px;width:100%;margin:0 auto;display:flex;flex-direction:column;gap:24px;flex:1}
 .site-foot{margin-top:56px;margin-left:calc(-1 * max(16px,env(safe-area-inset-left,0px)));margin-right:calc(-1 * max(16px,env(safe-area-inset-right,0px)));
   background:var(--ink);color:var(--paper);padding-block:22px calc(22px + env(safe-area-inset-bottom,0px));
@@ -47,7 +52,7 @@ html{height:100%}
 .claude-mark{width:1.15em;height:1.15em;flex:none}
 .site-foot .ver{font-family:var(--f-mono);font-size:12px;letter-spacing:.06em;opacity:.7}
 button,input,select{font:inherit;color:inherit}
-button{cursor:pointer}
+button{cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 :focus-visible{outline:2px solid var(--delft);outline-offset:2px}
 .mono{font-family:var(--f-mono);font-size:12px;letter-spacing:.04em}
 
@@ -94,11 +99,12 @@ select,.ghost,input[type="search"]{background:var(--surface);border:1px solid va
 
 /* flashcard */
 .stage{perspective:1400px}
-.card{display:grid;transform-style:preserve-3d;transition:transform .55s cubic-bezier(.3,.7,.2,1);cursor:pointer;border:0;background:none;padding:0;width:100%;text-align:inherit}
+.card{display:grid;grid-template-columns:minmax(0,1fr);min-width:0;transform-style:preserve-3d;transition:transform .55s cubic-bezier(.3,.7,.2,1);cursor:pointer;border:0;background:none;padding:0;width:100%;text-align:inherit}
 .card.flipped{transform:rotateY(180deg)}
 .face{grid-area:1/1;backface-visibility:hidden;-webkit-backface-visibility:hidden;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
   padding:32px 24px 24px;display:flex;flex-direction:column;align-items:center;gap:16px;min-height:400px}
 .back{transform:rotateY(180deg)}
+.back>.tag{white-space:normal;text-align:center;line-height:1.6;max-width:100%}
 .inf{font-family:var(--f-display);font-size:clamp(36px,9vw,48px);font-weight:400;line-height:1.05;letter-spacing:-.015em;margin:4px 0 0;text-align:center}
 .en{color:var(--muted);margin:-8px 0 0}
 .tag{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:3px 10px;white-space:nowrap}
@@ -184,12 +190,45 @@ td .tile .orn{display:none}
 .note{color:var(--muted);font-size:13px}
 
 @media (max-width:460px){
+  /* header: logo + palette on one row, tabs full width below */
+  header{display:grid;grid-template-columns:1fr auto;gap:14px 12px}
+  .head-right{display:contents}
+  #theme-btn{grid-column:2;grid-row:1;padding:9px}
+  nav{grid-column:1/-1;grid-row:2}
+  nav button{flex:1;padding:8px 10px}
+  .app{gap:20px}
+  /* iOS zooms into fields under 16px */
+  select,input{font-size:16px}
+  .tools select{flex:1;min-width:0}
+  .tools .spacer{display:none}
+  .tools input[type="search"]{flex-basis:100% !important}
+  .tools .lbl-t{display:none}
+  .tools .ghost{padding:9px 11px}
   .controls{grid-template-columns:1fr 1fr}
   .controls .nav-prev{order:3}.controls .nav-next{order:4}
-  .face{min-height:380px;padding:28px 18px 20px}
+  .controls .nav-prev,.controls .nav-next{padding:9px}
+  .face{min-height:360px;padding:26px 18px 20px;gap:14px}
+  .front .tile{--ts:140px !important}
+  .back .head .inf{font-size:28px}
+  .form{padding:12px 0}
   .form .val{font-size:22px}
+  .panel{padding:20px 18px}
+  .q-head{gap:14px}
   .q-head .inf{font-size:30px}
-  .q-head .tile{--ts:84px !important}
+  .q-head .tile{--ts:80px !important}
+  /* list: drop the icon column so the table fits the screen */
+  table{min-width:0}
+  th:first-child,td:first-child{display:none}
+  th,td{padding-inline:8px}
+  th:nth-child(2),td:nth-child(2){padding-left:12px}
+  td.v{font-size:16px;overflow-wrap:anywhere}
+  td.chk{padding-right:10px}
+}
+/* touch screens: no keyboard hints, show swipe hint */
+.touch-only{display:none}
+@media (hover:none) and (pointer:coarse){
+  .keys,.btn kbd{display:none}
+  .touch-only{display:inline}
 }
 @media (prefers-reduced-motion:reduce){.card{transition:none}.bar span{transition:none}}
 </style>
@@ -442,7 +481,7 @@ const opt = (val,label,sel) => `<option value="${val}" ${sel===val?"selected":""
 /* ---------- progress ---------- */
 function renderProgress(){
   const ki = VERBS.filter(v=>!v.reg && known.has(v.inf)).length, kr = VERBS.filter(v=>v.reg && known.has(v.inf)).length;
-  $("#progress").innerHTML = `Gekend: <b>${ki}</b> / ${IRR_N} onregelmatig &nbsp;·&nbsp; <b>${kr}</b> / ${REG_N} regelmatig`;
+  $("#progress").innerHTML = `Gekend &nbsp;<b>${ki}</b>/${IRR_N} onregelmatig &nbsp;·&nbsp; <b>${kr}</b>/${REG_N} regelmatig`;
   $("#bar").style.width = ((ki+kr)/VERBS.length*100)+"%";
 }
 
@@ -478,7 +517,7 @@ function renderCards(){
         ${patternOptions(C.filter)}
       </select>
       <span class="spacer"></span>
-      <button class="ghost" id="shuffle" aria-pressed="${C.shuffled}"><i data-lucide="shuffle"></i>Schudden</button>
+      <button class="ghost" id="shuffle" aria-pressed="${C.shuffled}" aria-label="Schudden"><i data-lucide="shuffle"></i><span class="lbl-t">Schudden</span></button>
     </div>`;
   if (!v){
     $("#view").innerHTML = toolbar + `<div class="empty" style="margin-top:16px">
@@ -500,7 +539,7 @@ function renderCards(){
           <p class="inf">${v.inf}</p>
           <p class="en">${esc(v.en)}</p>
           <span class="tag">${PATTERNS[v.pat]}</span>
-          <span class="hint">Tik om om te draaien</span>
+          <span class="hint">Tik om om te draaien<span class="touch-only"> · veeg om te bladeren</span></span>
         </div>
         <div class="face back" aria-hidden="${!C.flipped}">
           <div class="head">${tile(v,64)}<div><p class="inf">${v.inf}</p><p class="en">${esc(v.en)}</p></div></div>
@@ -522,7 +561,11 @@ function renderCards(){
     <div class="counter mono">${C.pos+1} / ${C.deck.length}</div>
     <div class="keys"><kbd>spatie</kbd> omdraaien &nbsp; <kbd>←</kbd> <kbd>→</kbd> bladeren &nbsp; <kbd>1</kbd> nog oefenen &nbsp; <kbd>2</kbd> ken ik</div>
     </div>`;
-  $("#card").onclick = flip;
+  const card = $("#card"); let sx=0, sy=0;
+  card.onclick = () => { if (S.cards.swiped) return; flip(); };
+  card.addEventListener("touchstart", e => { const t=e.touches[0]; sx=t.clientX; sy=t.clientY; }, {passive:true});
+  card.addEventListener("touchend", e => { const t=e.changedTouches[0], dx=t.clientX-sx, dy=t.clientY-sy;
+    if (Math.abs(dx)>50 && Math.abs(dx)>Math.abs(dy)*1.5){ S.cards.swiped=true; setTimeout(()=>S.cards.swiped=false,400); move(dx<0?1:-1); } }, {passive:true});
   $("#prev").onclick = ()=>move(-1);
   $("#next").onclick = ()=>move(1);
   $("#again").onclick = ()=>mark(false);
@@ -747,6 +790,7 @@ function isDark(){
 function applyTheme(){
   const th = THEMES.find(t=>t[0]===themeId) || THEMES[0], vals = isDark() ? th[3] : th[2];
   TKEYS.forEach((k,i)=>document.body.style.setProperty("--"+k, vals[i]));
+  const tc = document.querySelector('meta[name="theme-color"]'); if (tc) tc.content = vals[0];
   renderSwatches();
 }
 function renderSwatches(){
