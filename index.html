@@ -162,8 +162,7 @@ kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--line);border
 .q-head.stuck .en{font-size:13px}
 .q-sentinel{height:0}
 /* typing on a phone: the iPhone keyboard doesn't shrink the page, so add room below to scroll the field up */
-body.typing #view{padding-bottom:75vh}
-body.typing .q-head,body.typing .q-head .tile,body.typing .q-head .inf{transition:none}
+
 .panel.ok-flash{animation:okFlash .55s ease-out}
 @keyframes okFlash{0%{box-shadow:0 0 0 0 var(--good)}40%{box-shadow:0 0 0 4px var(--good-soft),0 0 0 6px var(--good)}100%{box-shadow:0 0 0 0 transparent}}
 .auto-next{display:flex;align-items:center;gap:8px;color:var(--good);font-weight:500}
@@ -177,7 +176,10 @@ body.typing .q-head,body.typing .q-head .tile,body.typing .q-head .inf{transitio
 .field{display:flex;flex-direction:column;gap:6px}
 .field label{display:flex;justify-content:space-between;gap:8px;font-weight:500}
 .field label span{font-weight:400;color:var(--muted);font-size:13px}
+.field .inwrap{position:relative}
 .field input{border:1px solid var(--line);background:var(--paper);border-radius:10px;padding:11px 12px;font-family:var(--f-display);font-size:20px;width:100%}
+.in-btn{position:absolute;right:5px;top:5px;bottom:5px;padding:0 14px !important;border-radius:8px !important;font-size:15px;gap:6px}
+.in-btn svg{width:16px;height:16px}
 .field input::placeholder{font-family:var(--f-body);font-size:14px;color:var(--muted);opacity:.8}
 .field.ok input{border-color:var(--good);background:var(--good-soft)}
 .field.no input{border-color:var(--bad);background:var(--bad-soft);text-decoration:line-through;text-decoration-color:var(--bad)}
@@ -671,11 +673,17 @@ function renderQuiz(){
   if (Q.phase==="setup") return renderQuizSetup();
   if (Q.phase==="done") return renderQuizDone();
   const v = Q.queue[Q.i], r = Q.result;
+  const oldHead = document.querySelector(".q-head");
+  const keepCompact = !!(oldHead && oldHead.classList.contains("stuck"));   // re-render without the header changing size
+  const last = Q.i===Q.queue.length-1;
+  const btnLabel = r ? (last ? `Resultaat<i data-lucide="flag"></i>` : `Volgende<i data-lucide="arrow-right"></i>`) : `Controleer`;
+  const btnKey = Q.mode==="quick" ? (Q.ask==="mean" ? null : Q.ask) : "pf";   // which field holds the button
   const fld = (id,label,sub,ph,key) => {
     const st = r ? (r[key].ok?"ok":"no") : "";
     const fix = r && !r[key].ok ? `<div class="fix">${r[key].msg||"Juist:"} <b>${r[key].want}</b></div>` : "";
+    const btn = key===btnKey ? `<button class="btn primary in-btn" type="submit" id="q-submit">${btnLabel}</button>` : "";
     return `<div class="field ${st}"><label for="${id}">${label}<span>${sub}</span></label>
-      <input id="${id}" enterkeyhint="next" lang="nl" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" writingsuggestions="false" data-1p-ignore data-lpignore="true" placeholder="${ph}" value="${esc(r?r[key].got:"")}" ${r?"readonly":""}>${fix}</div>`;
+      <div class="inwrap"><input id="${id}" enterkeyhint="next" lang="nl" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" writingsuggestions="false" data-1p-ignore data-lpignore="true" placeholder="${r?"":ph}" value="${esc(r?r[key].got:"")}" ${r?"readonly":""}>${btn}</div>${fix}</div>`;
   };
   const quick = Q.mode==="quick", askMean = quick ? Q.ask==="mean" : Q.meaning;
   const show = k => !quick || Q.ask===k;
@@ -692,7 +700,7 @@ function renderQuiz(){
   $("#view").innerHTML = `<div class="panel">
     <div class="q-meta mono"><span>Vraag ${Q.i+1} van ${Q.queue.length}</span><span>${Q.points} ${Q.points===1?"punt":"punten"}</span></div>
     <div class="bar"><span style="width:${(Q.i/Q.queue.length*100)}%"></span></div>
-    <div class="q-sentinel"></div><div class="q-head">${head}</div>
+    <div class="q-sentinel"></div><div class="q-head ${keepCompact?"stuck":""}">${head}</div>
     <form id="qform" style="display:flex;flex-direction:column;gap:16px">
       ${quick ? `<span class="ask-label"><i data-lucide="zap"></i>${ASK_LABEL[Q.ask]}</span>` : ""}
       ${mean}
@@ -701,7 +709,7 @@ function renderQuiz(){
       ${show("pf") ? fld("q-pf","Perfectum","hulpwerkwoord + deelwoord","bijv. heeft gelopen","pf") : ""}
       ${typeLine}
       ${r && Q.autoNext ? `<div class="auto-next" style="--adv:${ADVANCE_MS}ms"><i data-lucide="check" style="width:18px;height:18px"></i>Goed! <span class="bar"><span></span></span></div>` : ""}
-      <button class="btn primary" type="submit" id="q-submit" ${!r && quick && askMean ? "hidden" : ""}>${r ? (Q.i===Q.queue.length-1?"Bekijk resultaat":"Volgende") : "Controleer"} <kbd style="background:none;color:inherit;border-color:currentColor;opacity:.6">enter</kbd></button>
+      ${btnKey ? "" : `<button class="btn primary" type="submit" id="q-submit" ${r ? "" : "hidden"}>${btnLabel}</button>`}
     </form>
     ${r || !show("pf") ? "" : `<p class="note">Schrijf het perfectum met <b>heeft</b> of <b>is</b>, zoals in <i>hij heeft gelopen</i>.</p>`}
   </div>`;
@@ -721,7 +729,7 @@ function renderQuiz(){
     if (quick) checkQ();   // quick mode: one tap answers the meaning question
     else {   // full mode: show the chosen meaning in the (sticky) header and go straight to the first form
       const en = document.querySelector(".q-head .en"); if (en) en.textContent = "Jouw keuze: " + Q.opts[Q.pick];
-      const f = $("#q-sg"); if (f) f.focus(); }
+      const f = $("#q-sg"); if (f) f.focus({preventScroll:true}); }
   });
   // return key: jump to the next empty field, submit from the last one
   const inputs = [...document.querySelectorAll("#qform input")];
@@ -730,11 +738,14 @@ function renderQuiz(){
     el.addEventListener("keydown", e=>{
       if (e.key!=="Enter" || r) return;
       const next = inputs.slice(k+1).find(x=>!x.value.trim());
-      if (next){ e.preventDefault(); next.focus(); }
+      if (next){ e.preventDefault(); next.focus({preventScroll:true}); }
     });
   });
   if (r) $("#qform").closest(".panel").classList.toggle("ok-flash", !!Q.autoNext);
   drawIcons();
+  lockQuizHeight();
+  const ib = document.querySelector(".in-btn");
+  if (ib) ib.previousElementSibling.style.paddingRight = (ib.offsetWidth + 14) + "px";
   watchStickyHead();
   const touch = window.matchMedia && matchMedia("(hover: none) and (pointer: coarse)").matches;
   const first = r ? (Q.autoNext || touch ? null : $("#q-submit")) : (touch && !Q.keepKb ? null : document.querySelector("#qform input"));
@@ -925,6 +936,7 @@ function startQuiz(list){
     (Q.source==="all" ? true : Q.source==="learn" ? !known.has(v.inf) : known.has(v.inf)));
   if (!pool.length){ $("#q-start").textContent = "Deze groep is leeg. Kies een andere."; return; }
   Q.queue = shuffle(pool).slice(0, list || !Q.size ? pool.length : Q.size);
+  { const v = document.getElementById("view"); if (v){ v.style.minHeight=""; v.dataset.minh=""; } }
   Q.ask=null; Q.i=0; Q.right=0; Q.points=0; Q.max=0; Q.final=null; Q.isRetry=!!list; Q.misses=[]; Q.result=null; Q.phase="ask";
   prepQ(); renderQuiz(); showViewTop();
 }
@@ -948,8 +960,8 @@ function keepKeyboard(on){
   if (on) k.focus({preventScroll:true});
 }
 
-/* ---------- sticky verb header + keep the field you type in visible above the keyboard ---------- */
-let stickyRaf = 0, revealTimer = 0;
+/* ---------- sticky verb header (no automatic scrolling anywhere in the quiz) ---------- */
+let stickyRaf = 0;
 function updateSticky(){
   stickyRaf = 0;
   const vv = window.visualViewport;
@@ -957,8 +969,6 @@ function updateSticky(){
   const sen = document.querySelector(".q-sentinel"), head = document.querySelector(".q-head");
   if (!sen || !head) return;
   const top = parseFloat(getComputedStyle(head).top) || 0, y = sen.getBoundingClientRect().top;
-  if (document.body.classList.contains("typing-ready")){ head.classList.add("stuck"); return; }
-  if (document.body.classList.contains("typing")) return;   // keyboard still opening: leave the header as it is
   // hysteresis so the header shrinking can't make it flip back and forth
   if (!head.classList.contains("stuck") && y < top - 2) head.classList.add("stuck");
   else if (head.classList.contains("stuck") && y > top + 60) head.classList.remove("stuck");
@@ -966,59 +976,25 @@ function updateSticky(){
 const queueSticky = () => { if (!stickyRaf) stickyRaf = requestAnimationFrame(updateSticky); };
 function watchStickyHead(){ updateSticky(); }
 addEventListener("scroll", queueSticky, {passive:true});
-/* Reveal timing: the iPhone keyboard takes ~0.3-0.5s to slide up and fires resize events on the way.
-   Wait until those have been quiet for a moment (and at least REVEAL_MIN after the tap), then scroll once. */
-const REVEAL_MIN = 550, REVEAL_QUIET = 280;
-let focusAt = 0;
-const keyboardUp = () => !!(window.visualViewport && visualViewport.height < innerHeight - 150);
-function revealActiveSoon(quiet){ const a=document.activeElement;
-  if (!a || a.tagName!=="INPUT" || a.id==="kb-keep") return;
-  const wait = Math.max(quiet, REVEAL_MIN - (Date.now() - focusAt));
-  clearTimeout(revealTimer); revealTimer = setTimeout(()=>revealField(a), wait); }
-addEventListener("resize", ()=>{ queueSticky(); revealActiveSoon(REVEAL_QUIET); });
-function revealField(el){
-  if (!el || !el.closest || !el.closest("#qform")) return;
-  if (S.quiz.result || el.readOnly) return;   // answer already checked: nothing to place
-  const vv = window.visualViewport, vTop = vv ? vv.offsetTop : 0, vH = vv ? vv.height : innerHeight;
-  const head = document.querySelector(".q-head");
-  // where the verb will sit once pinned: its sticky top plus its (compact) height
-  const headBottom = head ? (parseFloat(getComputedStyle(head).top) || 0) - vTop + head.offsetHeight : 0;
-  const field = el.closest(".field") || el, r = field.getBoundingClientRect();
-  const btn = document.getElementById("q-submit");
-  const want = Math.max(headBottom, 0) + 12;            // just under the sticky verb
-  const top = r.top - vTop, bottom = (btn && !btn.hidden ? Math.max(r.bottom, btn.getBoundingClientRect().bottom) : r.bottom) - vTop;
-  // Safari's floating address bar and the keyboard's arrow/✓ bar sit over the bottom ~110px of the visible area
-  const typing = document.body.classList.contains("typing");
-  if (typing){ document.body.classList.add("typing-ready"); if (head) head.classList.add("stuck"); }
-  const delta = top - want;
-  if (Math.abs(delta) < 6) return;   // already in place: no tiny wobble
-  if (typing || top < want || bottom > vH - 110) window.scrollTo({top: Math.max(0, scrollY + delta), behavior: calm() ? "auto" : "smooth"});
-}
-const isTouch = () => !!(window.matchMedia && matchMedia("(hover: none) and (pointer: coarse)").matches);
-function quizField(el){ return el && (el.id==="kb-keep" || (el.tagName==="INPUT" && el.closest && el.closest("#qform"))); }
-/* Golden rule: inside a running quiz, focusing or leaving a field never changes the layout.
-   The typing room and the compact header stay until the quiz screen itself changes. */
-const inQuiz = () => S.tab==="quiz" && S.quiz.phase==="ask";
-function setTyping(on){
-  if (!isTouch()) return;
-  if (!on && inQuiz()){ clearTimeout(revealTimer); return; }
-  document.body.classList.toggle("typing", on);
-  if (!on){ document.body.classList.remove("typing-ready"); clearTimeout(revealTimer); queueSticky(); }
-}
-document.addEventListener("focusout", ()=>{ setTimeout(()=>{
-  if (quizField(document.activeElement)) return;
-  setTyping(false); }, 60); });   // no-op while a quiz is running (golden rule)
-document.addEventListener("focusin", e=>{
-  if (!quizField(e.target)) return;
-  setTyping(true);
-  if (e.target.id==="kb-keep") return;
-  // keyboard already open (moving between fields or questions): place the field right away; otherwise wait for it
-  if (keyboardUp() || document.body.classList.contains("typing-ready")){ clearTimeout(revealTimer); revealTimer = setTimeout(()=>revealField(e.target), 60); return; }
-  focusAt = Date.now(); revealActiveSoon(0);
-});
+addEventListener("resize", queueSticky);
 if (window.visualViewport){
-  visualViewport.addEventListener("resize", ()=>{ queueSticky(); revealActiveSoon(REVEAL_QUIET); });
+  visualViewport.addEventListener("resize", queueSticky);
   visualViewport.addEventListener("scroll", queueSticky);
+}
+/* While a quiz runs, #view only grows: when a question is shorter than the previous one the browser
+   would otherwise clamp the scroll position (an upward jump) if you're near the bottom. */
+function lockQuizHeight(){
+  const v = document.getElementById("view"); if (!v) return;
+  v.style.minHeight = "";
+  if (S.tab!=="quiz" || S.quiz.phase!=="ask") { v.dataset.minh = ""; return; }
+  const h = Math.max(v.offsetHeight, +v.dataset.minh || 0);
+  v.dataset.minh = h; v.style.minHeight = h + "px";
+}
+/* Safety net, not a slide: if a new screen would be entirely out of view, jump (no animation) so it shows. */
+function keepInView(sel){
+  const el = document.querySelector(sel); if (!el) return;
+  const r = el.getBoundingClientRect();
+  if (r.bottom < 60 || r.top > innerHeight - 60) window.scrollTo({top: Math.max(0, scrollY + r.top - 12), behavior:"auto"});
 }
 
 function prepQ(){
@@ -1057,7 +1033,6 @@ function checkQ(){
 }
 function afterCheck(allRight){
   const Q=S.quiz, last = Q.i>=Q.queue.length-1;
-  clearTimeout(revealTimer);   // a field focused just before submitting must not scroll afterwards
   Q.autoNext = allRight;
   Q.keepKb = false;
   if (allRight){
@@ -1080,25 +1055,17 @@ function nextQ(){ const Q=S.quiz; clearTimeout(Q.advTimer); Q.autoNext=false; Q.
     Q.phase="done";
     Q.final = Q.isRetry ? null : recordScore(Q.kind, Q.points, Q.max);
     if (Q.final && Q.final.perfect && Q.kind==="mix") unlockAudio();   // must happen inside this click/keypress
+    const v = document.getElementById("view"); if (v){ v.style.minHeight=""; v.dataset.minh=""; }
     renderQuiz();
-    window.scrollTo({top:0, behavior: calm() ? "auto" : "smooth"});
-    setTimeout(()=>{ if (!quizField(document.activeElement)) setTyping(false); }, 700);
+    keepInView("#view .panel");
     const F = Q.final; setTimeout(()=>celebrate(F), 150);
     return;
   }
   Q.i++; prepQ();
   const keep = Q.keepKb; Q.keepKb = false;
-  if (!keep) document.body.classList.remove("typing-ready");   // the new header starts full size
   renderQuiz();
-  if (keep){   // keyboard stays open: the field gets placed under the verb once (via focus)
-    const f = document.querySelector("#qform input"); if (f) f.focus({preventScroll:true});
-    return;
-  }
-  // keyboard closed: one scroll so the new question starts at the top, then drop the typing room
-  const sen = document.querySelector(".q-sentinel");
-  if (sen){ const y = sen.getBoundingClientRect().top;
-    if (y < 0 || y > innerHeight * .5) window.scrollTo({top: Math.max(0, scrollY + y - 96), behavior: calm() ? "auto" : "smooth"}); }
-  setTimeout(()=>{ if (!quizField(document.activeElement)) setTyping(false); }, 700);
+  keepInView("#view .panel");
+  if (keep){ const f = document.querySelector("#qform input"); if (f) f.focus({preventScroll:true}); }
 }
 function renderQuizDone(){
   const Q=S.quiz, n=Q.queue.length, F=Q.final, pct=pctOf(Q.points,Q.max);
@@ -1177,9 +1144,8 @@ function showViewTop(){
   if (top < 0 || top > innerHeight * .6) window.scrollTo({top: Math.max(0, scrollY + top - 12), behavior:"auto"});
 }
 function setTab(t){
-  const leavingQuiz = S.tab==="quiz" && t!=="quiz";
   S.tab=t; store.set("tab",t);
-  if (leavingQuiz) setTyping(false);
+  const v = document.getElementById("view"); if (v){ v.style.minHeight=""; v.dataset.minh=""; }
   document.querySelectorAll("nav button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.tab===t));
   ({cards:renderCards, quiz:renderQuiz, list:renderList})[t]();
   showViewTop();
