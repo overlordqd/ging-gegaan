@@ -167,6 +167,11 @@ kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--line);border
 .score{font-family:var(--f-display);font-size:64px;line-height:1;margin:0}
 .score small{font-size:24px;color:var(--muted)}
 .misses{display:flex;flex-direction:column}
+.ask-label{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--delft);background:var(--delft-soft);border-radius:999px;padding:4px 10px}
+.ask-label svg{width:13px;height:13px}
+.mode-chip{display:flex;flex-direction:column;align-items:flex-start;gap:1px;text-align:left;border-radius:14px !important;padding:9px 14px !important;flex:1;min-width:140px}
+.mode-chip small{font-size:12px;color:var(--muted);font-weight:400}
+.mode-chip[aria-pressed="true"] small{color:inherit;opacity:.8}
 .q-pts{font-family:var(--f-mono);font-size:12px;letter-spacing:.04em;border-radius:999px;padding:3px 10px;background:var(--delft-soft);color:var(--delft);white-space:nowrap}
 .q-pts.full{background:var(--good-soft);color:var(--good)}
 .q-pts.zero{background:var(--bad-soft);color:var(--bad)}
@@ -543,7 +548,7 @@ const S = {
   tab: store.get("tab","cards"),
   cards: { filter: store.get("filter","irr"), shuffled:false, deck:[], pos:0, flipped:false },
   quiz: { phase:"setup", size: [10,20,40,0].includes(store.get("qsize",10)) ? store.get("qsize",10) : 10, source:"all",
-          kind: store.get("qkind","irr"), meaning: store.get("qmean",true), opts:[], pick:null,
+          kind: store.get("qkind","irr"), meaning: store.get("qmean",true), mode: store.get("qmode","full")==="quick"?"quick":"full", ask:null, opts:[], pick:null,
           queue:[], i:0, right:0, misses:[], result:null },
   list: { q:"", pat:"all" }
 };
@@ -653,37 +658,42 @@ function renderQuiz(){
     return `<div class="field ${st}"><label for="${id}">${label}<span>${sub}</span></label>
       <input id="${id}" lang="nl" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="${ph}" value="${esc(r?r[key].got:"")}" ${r?"readonly":""}>${fix}</div>`;
   };
-  const hide = Q.meaning && !r;
+  const quick = Q.mode==="quick", askMean = quick ? Q.ask==="mean" : Q.meaning;
+  const show = k => !quick || Q.ask===k;
+  const hide = askMean && !r;
   const head = hide
     ? `<div class="tile" style="--ts:104px">${ORN}<span class="fallback">?</span></div><div><p class="inf">${v.inf}</p><p class="en">Kies hieronder de betekenis</p></div>`
     : `${tile(v,104)}<div><p class="inf">${v.inf}</p><p class="en">${esc(v.en)}</p></div>`;
-  const mean = Q.meaning ? `<div class="field-group"><span class="mono">Wat betekent het?</span><div class="choices">
+  const mean = askMean ? `<div class="field-group"><span class="mono">Wat betekent het?</span><div class="choices">
       ${Q.opts.map((o,k)=>{ const st = r ? (o===v.en?"right":(Q.pick===k?"wrong":"")) : "";
         return `<button type="button" class="chip ${st}" data-k="${k}" aria-pressed="${Q.pick===k}" ${r?"disabled":""}>${esc(o)}</button>`; }).join("")}
     </div></div>` : "";
   const ppq = PTS_PER_Q();
-  const typeLine = r ? `<div class="type-line"><span class="q-pts ${r.pts===ppq?"full":r.pts===0?"zero":""}">+${r.pts} / ${ppq} punten</span><span class="tag">${v.reg?"":"onregelmatig · "}${PATTERNS[v.pat]}</span><span class="note">${esc(PATTERN_NOTE[v.pat])}</span></div>` : "";
+  const typeLine = r ? `<div class="type-line"><span class="q-pts ${r.pts===ppq?"full":r.pts===0?"zero":""}">+${r.pts} / ${ppq} ${ppq===1?"punt":"punten"}</span><span class="tag">${v.reg?"":"onregelmatig · "}${PATTERNS[v.pat]}</span><span class="note">${esc(PATTERN_NOTE[v.pat])}</span></div>` : "";
   $("#view").innerHTML = `<div class="panel">
-    <div class="q-meta mono"><span>Vraag ${Q.i+1} van ${Q.queue.length}</span><span>${Q.points} punten</span></div>
+    <div class="q-meta mono"><span>Vraag ${Q.i+1} van ${Q.queue.length}</span><span>${Q.points} ${Q.points===1?"punt":"punten"}</span></div>
     <div class="bar"><span style="width:${(Q.i/Q.queue.length*100)}%"></span></div>
     <div class="q-head">${head}</div>
     <form id="qform" style="display:flex;flex-direction:column;gap:16px">
+      ${quick ? `<span class="ask-label"><i data-lucide="zap"></i>${ASK_LABEL[Q.ask]}</span>` : ""}
       ${mean}
-      ${fld("q-sg","Imperfectum","ik · jij · hij","bijv. liep","sg")}
-      ${fld("q-pl","Imperfectum","wij · jullie · zij","bijv. liepen","pl")}
-      ${fld("q-pf","Perfectum","hulpwerkwoord + deelwoord","bijv. heeft gelopen","pf")}
+      ${show("sg") ? fld("q-sg","Imperfectum","ik · jij · hij","bijv. liep","sg") : ""}
+      ${show("pl") ? fld("q-pl","Imperfectum","wij · jullie · zij","bijv. liepen","pl") : ""}
+      ${show("pf") ? fld("q-pf","Perfectum","hulpwerkwoord + deelwoord","bijv. heeft gelopen","pf") : ""}
       ${typeLine}
-      <button class="btn primary" type="submit" id="q-submit">${r ? (Q.i===Q.queue.length-1?"Bekijk resultaat":"Volgende") : "Controleer"} <kbd style="background:none;color:inherit;border-color:currentColor;opacity:.6">enter</kbd></button>
+      <button class="btn primary" type="submit" id="q-submit" ${!r && quick && askMean ? "hidden" : ""}>${r ? (Q.i===Q.queue.length-1?"Bekijk resultaat":"Volgende") : "Controleer"} <kbd style="background:none;color:inherit;border-color:currentColor;opacity:.6">enter</kbd></button>
     </form>
-    ${r ? "" : `<p class="note">Schrijf het perfectum met <b>heeft</b> of <b>is</b>, zoals in <i>hij heeft gelopen</i>.</p>`}
+    ${r || !show("pf") ? "" : `<p class="note">Schrijf het perfectum met <b>heeft</b> of <b>is</b>, zoals in <i>hij heeft gelopen</i>.</p>`}
   </div>`;
   $("#qform").onsubmit = e => { e.preventDefault(); r ? nextQ() : checkQ(); };
   document.querySelectorAll("[data-k]").forEach(b => b.onclick = () => {
     Q.pick = +b.dataset.k;
     document.querySelectorAll("[data-k]").forEach(x => x.setAttribute("aria-pressed", x===b));
+    if (quick) checkQ();   // quick mode: one tap answers the meaning question
   });
   drawIcons();
-  (r ? $("#q-submit") : $("#q-sg")).focus({preventScroll:true});
+  const first = r ? $("#q-submit") : document.querySelector("#qform input");
+  if (first) first.focus({preventScroll:true});
 }
 function renderQuizSetup(){
   const Q=S.quiz;
@@ -693,7 +703,14 @@ function renderQuizSetup(){
   const pressed = (a,b) => `aria-pressed="${a===b}"`;
   $("#view").innerHTML = `<div class="panel">
     <h2>Test jezelf</h2>
-    <p>Je ziet een werkwoord, kiest wat het betekent en typt drie vormen: het imperfectum enkelvoud, het imperfectum meervoud en het perfectum met hulpwerkwoord. Bij <b>Gemengd</b> moet je zelf herkennen of een werkwoord regelmatig is.</p>
+    <p>${Q.mode==="quick"
+      ? "Per werkwoord vraagt de quiz één onderdeel, willekeurig gekozen: de betekenis, het imperfectum enkelvoud of meervoud, of het perfectum."
+      : "Je ziet een werkwoord, kiest wat het betekent en typt drie vormen: het imperfectum enkelvoud, het imperfectum meervoud en het perfectum met hulpwerkwoord."}
+      Bij <b>Gemengd</b> moet je zelf herkennen of een werkwoord regelmatig is.</p>
+    <div class="field-group"><span class="mono">Modus</span><div class="choices">
+      <button class="chip mode-chip" data-mode="full" ${pressed(Q.mode,"full")}>Volledig<small>alle vormen per werkwoord</small></button>
+      <button class="chip mode-chip" data-mode="quick" ${pressed(Q.mode,"quick")}><span><i data-lucide="zap" style="width:14px;height:14px;vertical-align:-2px"></i> Snel</span><small>één willekeurig onderdeel</small></button>
+    </div></div>
     <div class="field-group"><span class="mono">Soort</span><div class="choices">
       <button class="chip" data-kind="irr" ${pressed(Q.kind,"irr")}>Onregelmatig (${IRR_N})</button>
       <button class="chip" data-kind="reg" ${pressed(Q.kind,"reg")}>Regelmatig (${REG_N})</button>
@@ -708,13 +725,16 @@ function renderQuizSetup(){
       <button class="chip" data-src="known" ${pressed(Q.source,"known")}>Al gekend (${kindPool.length-learnN})</button>
     </div></div>
     <div class="field-group"><span class="mono">Betekenis</span><div class="choices">
-      <button class="chip" data-mean="1" ${pressed(Q.meaning,true)}>Ook betekenis vragen</button>
+      <button class="chip" data-mean="1" ${pressed(Q.meaning,true)}>${Q.mode==="quick"?"Betekenis mag gevraagd worden":"Ook betekenis vragen"}</button>
       <button class="chip" data-mean="0" ${pressed(Q.meaning,false)}>Alleen de vormen</button>
     </div></div>
-    <div class="field-group"><span class="mono">Jouw records</span>${recordsHTML(Q.kind)}</div>
+    <div class="field-group"><span class="mono">Jouw records${Q.mode==="quick"?" · snel":" · volledig"}</span>${recordsHTML(Q.kind)}</div>
     <button class="btn primary" id="q-start">Start de quiz</button>
-    <p class="note">Elk juist onderdeel is een punt waard: de betekenis en elke vorm. Een vraag is goed als alles klopt. Dan telt het werkwoord als gekend. Een fout zet het terug bij "nog te leren".</p>
+    <p class="note">${Q.mode==="quick"
+      ? 'Elk juist antwoord is een punt waard. Een fout zet het werkwoord terug bij "nog te leren". Als gekend markeren doe je in de volledige modus.'
+      : 'Elk juist onderdeel is een punt waard: de betekenis en elke vorm. Een vraag is goed als alles klopt. Dan telt het werkwoord als gekend. Een fout zet het terug bij "nog te leren".'}</p>
   </div>`;
+  document.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>{Q.mode=b.dataset.mode; store.set("qmode",Q.mode); renderQuizSetup();});
   document.querySelectorAll("[data-kind]").forEach(b=>b.onclick=()=>{Q.kind=b.dataset.kind; store.set("qkind",Q.kind); renderQuizSetup();});
   document.querySelectorAll("[data-size]").forEach(b=>b.onclick=()=>{Q.size=+b.dataset.size; store.set("qsize",Q.size); renderQuizSetup();});
   document.querySelectorAll("[data-src]").forEach(b=>b.onclick=()=>{Q.source=b.dataset.src; renderQuizSetup();});
@@ -723,7 +743,9 @@ function renderQuizSetup(){
   drawIcons();
 }
 /* ---------- scores: one point per correct part; records per category (irr / reg / mix) ---------- */
-const PTS_PER_Q = () => S.quiz.meaning ? 4 : 3;
+const PTS_PER_Q = () => S.quiz.mode==="quick" ? 1 : S.quiz.meaning ? 4 : 3;
+const ASK_LABEL = {mean:"Betekenis", sg:"Imperfectum enkelvoud", pl:"Imperfectum meervoud", pf:"Perfectum"};
+const modeKey = cat => S.quiz.mode==="quick" ? cat+":q" : cat;   // quick-mode records are kept apart
 const CATS = {irr:"Onregelmatig", reg:"Regelmatig", mix:"Gemengd"};
 const pctOf = (p,m) => m ? Math.round(p/m*100) : 0;
 /* better = higher percentage; same percentage over a longer quiz also counts */
@@ -742,21 +764,22 @@ function getScores(){
   return s;
 }
 function recordScore(cat, points, max){
-  const Q=S.quiz, all = getScores(), e = all[cat] || {best:null, hist:[]};
-  const prev = e.best, entry = {p:points, m:max, t:Date.now(), n:Q.queue.length, mean:Q.meaning};
+  const Q=S.quiz, all = getScores(), key = modeKey(cat), e = all[key] || {best:null, hist:[]};
+  const prev = e.best, entry = {p:points, m:max, t:Date.now(), n:Q.queue.length, mean:Q.meaning, quick:Q.mode==="quick"};
   const beat = !!prev && better(entry, prev);
   if (!prev || beat) e.best = entry;
   e.hist = [entry, ...(e.hist||[])].slice(0,5);
-  all[cat] = e; store.set("scores2", all);
+  all[key] = e; store.set("scores2", all);
   return {prev, beat, first:!prev, best:e.best, hist:e.hist, perfect: points===max && max>0, cat};
 }
 const histDesc = h => h.n ? `${h.n} vragen${h.mean?" · met betekenis":""}` : `${h.m} punten max.`;
+const modeName = () => S.quiz.mode==="quick" ? " · snel" : "";
 function ago(t){ const m = Math.round((Date.now()-t)/60000);
   if (m<1) return "zonet"; if (m<60) return `${m} min geleden`; const h=Math.round(m/60);
   if (h<24) return `${h} uur geleden`; const d=Math.round(h/24); return d===1?"gisteren":`${d} dagen geleden`; }
 function recordsHTML(active){
   const all = getScores();
-  return `<div class="records">${Object.keys(CATS).map(c=>{ const b = all[c] && all[c].best;
+  return `<div class="records">${Object.keys(CATS).map(c=>{ const e = all[modeKey(c)], b = e && e.best;
     return `<div class="rec ${c===active?"on":""} ${b&&b.p===b.m?"perfect":""}"><span class="mono">${CATS[c]}</span>
       <b>${b?pctOf(b.p,b.m)+"%":"–"}</b><span class="d">${b?`${b.p}/${b.m}${b.n?` · ${b.n} vragen`:""}`:"nog geen score"}</span></div>`; }).join("")}</div>`;
 }
@@ -856,25 +879,38 @@ function startQuiz(list){
     (Q.source==="all" ? true : Q.source==="learn" ? !known.has(v.inf) : known.has(v.inf)));
   if (!pool.length){ $("#q-start").textContent = "Deze groep is leeg. Kies een andere."; return; }
   Q.queue = shuffle(pool).slice(0, list || !Q.size ? pool.length : Q.size);
-  Q.i=0; Q.right=0; Q.points=0; Q.max=0; Q.final=null; Q.isRetry=!!list; Q.misses=[]; Q.result=null; Q.phase="ask";
+  Q.ask=null; Q.i=0; Q.right=0; Q.points=0; Q.max=0; Q.final=null; Q.isRetry=!!list; Q.misses=[]; Q.result=null; Q.phase="ask";
   prepQ(); renderQuiz();
 }
 function prepQ(){
   const Q=S.quiz, v=Q.queue[Q.i];
   Q.pick = null;
+  if (Q.mode==="quick"){
+    const parts = ["sg","pl","pf", ...(Q.meaning?["mean"]:[])].filter(k=>k!==Q.ask || Q.i===0);
+    Q.ask = parts[Math.floor(Math.random()*parts.length)];   // never the same part twice in a row
+  }
   const others = shuffle([...new Set(VERBS.filter(x=>x.en!==v.en).map(x=>x.en))]).slice(0,3);
   Q.opts = shuffle([v.en, ...others]);
 }
 function checkQ(){
   const Q=S.quiz, v=Q.queue[Q.i];
-  const sg=norm($("#q-sg").value), pl=norm($("#q-pl").value), pf=norm($("#q-pf").value);
+  if (Q.result) return;
+  const val = id => { const el=$("#"+id); return el ? el.value : ""; };
+  const sg=norm(val("q-sg")), pl=norm(val("q-pl")), pf=norm(val("q-pf"));
   const res = {
-    sg:{got:$("#q-sg").value, ok:v.sg.includes(sg), want:v.sg.join(" / ")},
-    pl:{got:$("#q-pl").value, ok:v.pl.includes(pl), want:v.pl.join(" / ")},
-    pf:{got:$("#q-pf").value, ok:v.aux.some(a=>pf===`${a} ${v.part}`), want:v.aux.map(a=>`${a} ${v.part}`).join(" / ")}
+    sg:{got:val("q-sg"), ok:v.sg.includes(sg), want:v.sg.join(" / ")},
+    pl:{got:val("q-pl"), ok:v.pl.includes(pl), want:v.pl.join(" / ")},
+    pf:{got:val("q-pf"), ok:v.aux.some(a=>pf===`${a} ${v.part}`), want:v.aux.map(a=>`${a} ${v.part}`).join(" / ")}
   };
   if (!res.pf.ok && pf===v.part) res.pf.msg = "Vergeet het hulpwerkwoord niet:";
   else if (!res.pf.ok && pf.endsWith(" "+v.part)) res.pf.msg = "Ander hulpwerkwoord:";
+  if (Q.mode==="quick"){
+    const ok = Q.ask==="mean" ? (Q.pick!=null && Q.opts[Q.pick]===v.en) : res[Q.ask].ok;
+    res.pts = ok ? 1 : 0; Q.points += res.pts; Q.max += 1;
+    // one part right isn't proof you know the verb, so quick mode only demotes on a mistake
+    if (ok) Q.right++; else { Q.misses.push(v); known.delete(v.inf); }
+    saveKnown(); Q.result = res; renderQuiz(); return;
+  }
   const meanOk = !Q.meaning || (Q.pick!=null && Q.opts[Q.pick]===v.en);
   const all = meanOk && res.sg.ok && res.pl.ok && res.pf.ok;
   res.pts = (Q.meaning && meanOk ? 1 : 0) + res.sg.ok + res.pl.ok + res.pf.ok;
@@ -898,7 +934,7 @@ function renderQuizDone(){
   const Q=S.quiz, n=Q.queue.length, F=Q.final, pct=pctOf(Q.points,Q.max);
   const verdict = pct===100 ? "Foutloos." : pct>=80 ? "Bijna alles goed." : pct>=50 ? "Op de goede weg." : "Blijf oefenen, het komt.";
   let badge = "";
-  const cn = F ? CATS[F.cat] : "";
+  const cn = F ? CATS[F.cat] + modeName() : "";
   if (F && F.perfect && (F.beat || F.first)) badge = `<span class="record perfect"><i data-lucide="crown"></i>100% · nieuw record ${cn}</span>`;
   else if (F && F.perfect) badge = `<span class="record perfect"><i data-lucide="crown"></i>Weer 100% · ${cn}</span>`;
   else if (F && F.beat) badge = `<span class="record"><i data-lucide="trophy"></i>Nieuw record ${cn}! Vorige: ${pctOf(F.prev.p,F.prev.m)}%</span>`;
@@ -912,7 +948,7 @@ function renderQuizDone(){
     <div class="result-top"><span class="mono" style="color:var(--muted)">EINDSCORE</span>${badge}</div>
     <div>
       <p class="score ${F&&(F.beat||F.perfect)?"beat":""}">${Q.points}<small> / ${Q.max} punten</small></p>
-      <div class="score-sub mono"><span>${pct}%</span><span>${Q.right} van ${n} vragen helemaal goed</span></div>
+      <div class="score-sub mono"><span>${pct}%</span><span>${Q.right} van ${n} vragen ${Q.mode==="quick"?"goed":"helemaal goed"}</span></div>
     </div>
     <h2>${verdict}</h2>
     ${hist}
