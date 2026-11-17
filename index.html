@@ -996,15 +996,18 @@ function revealField(el){
 }
 const isTouch = () => !!(window.matchMedia && matchMedia("(hover: none) and (pointer: coarse)").matches);
 function quizField(el){ return el && (el.id==="kb-keep" || (el.tagName==="INPUT" && el.closest && el.closest("#qform"))); }
+/* Golden rule: inside a running quiz, focusing or leaving a field never changes the layout.
+   The typing room and the compact header stay until the quiz screen itself changes. */
+const inQuiz = () => S.tab==="quiz" && S.quiz.phase==="ask";
 function setTyping(on){
   if (!isTouch()) return;
+  if (!on && inQuiz()){ clearTimeout(revealTimer); return; }
   document.body.classList.toggle("typing", on);
   if (!on){ document.body.classList.remove("typing-ready"); clearTimeout(revealTimer); queueSticky(); }
 }
 document.addEventListener("focusout", ()=>{ setTimeout(()=>{
   if (quizField(document.activeElement)) return;
-  if (S.tab==="quiz" && S.quiz.phase==="ask" && S.quiz.result){ clearTimeout(revealTimer); return; }   // nextQ tidies up
-  setTyping(false); }, 60); });
+  setTyping(false); }, 60); });   // no-op while a quiz is running (golden rule)
 document.addEventListener("focusin", e=>{
   if (!quizField(e.target)) return;
   setTyping(true);
@@ -1174,7 +1177,9 @@ function showViewTop(){
   if (top < 0 || top > innerHeight * .6) window.scrollTo({top: Math.max(0, scrollY + top - 12), behavior:"auto"});
 }
 function setTab(t){
+  const leavingQuiz = S.tab==="quiz" && t!=="quiz";
   S.tab=t; store.set("tab",t);
+  if (leavingQuiz) setTyping(false);
   document.querySelectorAll("nav button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.tab===t));
   ({cards:renderCards, quiz:renderQuiz, list:renderList})[t]();
   showViewTop();
