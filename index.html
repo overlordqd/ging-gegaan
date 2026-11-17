@@ -702,7 +702,16 @@ function renderQuiz(){
     </form>
     ${r || !show("pf") ? "" : `<p class="note">Schrijf het perfectum met <b>heeft</b> of <b>is</b>, zoals in <i>hij heeft gelopen</i>.</p>`}
   </div>`;
-  $("#qform").onsubmit = e => { e.preventDefault(); r ? nextQ() : checkQ(); };
+  let fired = false;
+  const go = () => { if (fired) return; fired = true; r ? nextQ() : checkQ(); };
+  $("#qform").onsubmit = e => { e.preventDefault(); go(); };
+  const sub = $("#q-submit");
+  if (sub && r){   // "Volgende": react on the first touch even if iOS is still closing the keyboard
+    let sx=0, sy=0;
+    sub.addEventListener("touchstart", e=>{ const t=e.touches[0]; sx=t.clientX; sy=t.clientY; }, {passive:true});
+    sub.addEventListener("touchend", e=>{ const t=e.changedTouches[0];
+      if (Math.abs(t.clientX-sx)<12 && Math.abs(t.clientY-sy)<12){ e.preventDefault(); go(); } });
+  }
   document.querySelectorAll("[data-k]").forEach(b => b.onclick = () => {
     Q.pick = +b.dataset.k;
     document.querySelectorAll("[data-k]").forEach(x => x.setAttribute("aria-pressed", x===b));
@@ -724,7 +733,8 @@ function renderQuiz(){
   if (r) $("#qform").closest(".panel").classList.toggle("ok-flash", !!Q.autoNext);
   drawIcons();
   watchStickyHead();
-  const first = r ? (Q.autoNext ? null : $("#q-submit")) : document.querySelector("#qform input");
+  const touch = window.matchMedia && matchMedia("(hover: none) and (pointer: coarse)").matches;
+  const first = r ? (Q.autoNext || touch ? null : $("#q-submit")) : document.querySelector("#qform input");
   if (first) first.focus({preventScroll:true});
   else if (r && Q.autoNext && Q.keepKb) $("#kb-keep") && $("#kb-keep").focus({preventScroll:true});
 }
@@ -1023,8 +1033,9 @@ function afterCheck(allRight){
     }
     scheduleAdvance();
   }
+  // wrong answer: close the keyboard now, while the field still exists, so it can't eat the next tap
+  if (!allRight && document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
   renderQuiz();
-  if (!allRight && document.activeElement && document.activeElement.tagName==="INPUT") document.activeElement.blur();
 }
 function nextQ(){ const Q=S.quiz; clearTimeout(Q.advTimer); Q.autoNext=false; Q.result=null;
   if (Q.i>=Q.queue.length-1){
