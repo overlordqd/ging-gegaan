@@ -161,6 +161,9 @@ kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--line);border
 .q-head.stuck .inf{font-size:24px !important}
 .q-head.stuck .en{font-size:13px}
 .q-sentinel{height:0}
+/* typing on a phone: the iPhone keyboard doesn't shrink the page, so add room below to scroll the field up */
+body.typing #view{padding-bottom:75vh}
+body.typing .q-head,body.typing .q-head .tile,body.typing .q-head .inf{transition:none}
 .panel.ok-flash{animation:okFlash .55s ease-out}
 @keyframes okFlash{0%{box-shadow:0 0 0 0 var(--good)}40%{box-shadow:0 0 0 4px var(--good-soft),0 0 0 6px var(--good)}100%{box-shadow:0 0 0 0 transparent}}
 .auto-next{display:flex;align-items:center;gap:8px;color:var(--good);font-weight:500}
@@ -734,7 +737,7 @@ function renderQuiz(){
   drawIcons();
   watchStickyHead();
   const touch = window.matchMedia && matchMedia("(hover: none) and (pointer: coarse)").matches;
-  const first = r ? (Q.autoNext || touch ? null : $("#q-submit")) : document.querySelector("#qform input");
+  const first = r ? (Q.autoNext || touch ? null : $("#q-submit")) : (touch && !Q.keepKb ? null : document.querySelector("#qform input"));
   if (first) first.focus({preventScroll:true});
   else if (r && Q.autoNext && Q.keepKb) $("#kb-keep") && $("#kb-keep").focus({preventScroll:true});
 }
@@ -954,6 +957,7 @@ function updateSticky(){
   const sen = document.querySelector(".q-sentinel"), head = document.querySelector(".q-head");
   if (!sen || !head) return;
   const top = parseFloat(getComputedStyle(head).top) || 0, y = sen.getBoundingClientRect().top;
+  if (document.body.classList.contains("typing")){ head.classList.add("stuck"); return; }
   // hysteresis so the header shrinking can't make it flip back and forth
   if (!head.classList.contains("stuck") && y < top - 2) head.classList.add("stuck");
   else if (head.classList.contains("stuck") && y > top + 60) head.classList.remove("stuck");
@@ -968,15 +972,29 @@ function revealField(el){
   if (!el || !el.closest || !el.closest("#qform")) return;
   const vv = window.visualViewport, vTop = vv ? vv.offsetTop : 0, vH = vv ? vv.height : innerHeight;
   const head = document.querySelector(".q-head");
-  const headBottom = head ? head.getBoundingClientRect().bottom - vTop : 0;
+  // where the verb will sit once pinned: its sticky top plus its (compact) height
+  const headBottom = head ? (parseFloat(getComputedStyle(head).top) || 0) - vTop + head.offsetHeight : 0;
   const field = el.closest(".field") || el, r = field.getBoundingClientRect();
   const btn = document.getElementById("q-submit");
   const want = Math.max(headBottom, 0) + 12;            // just under the sticky verb
   const top = r.top - vTop, bottom = (btn && !btn.hidden ? Math.max(r.bottom, btn.getBoundingClientRect().bottom) : r.bottom) - vTop;
-  if (top < want || bottom > vH - 8) window.scrollBy({top: top - want, behavior: calm() ? "auto" : "smooth"});
+  // Safari's floating address bar and the keyboard's arrow/✓ bar sit over the bottom ~110px of the visible area
+  const typing = document.body.classList.contains("typing");
+  if (typing || top < want || bottom > vH - 110) window.scrollTo({top: Math.max(0, scrollY + top - want), behavior: calm() ? "auto" : "smooth"});
 }
+const isTouch = () => !!(window.matchMedia && matchMedia("(hover: none) and (pointer: coarse)").matches);
+function quizField(el){ return el && (el.id==="kb-keep" || (el.tagName==="INPUT" && el.closest && el.closest("#qform"))); }
+function setTyping(on){
+  if (!isTouch()) return;
+  document.body.classList.toggle("typing", on);
+  const head = document.querySelector(".q-head"); if (head && on) head.classList.add("stuck");
+  if (!on) queueSticky();
+}
+document.addEventListener("focusout", ()=>{ setTimeout(()=>{ if (!quizField(document.activeElement)) setTyping(false); }, 60); });
 document.addEventListener("focusin", e=>{
-  if (e.target.id==="kb-keep" || e.target.tagName!=="INPUT") return;
+  if (!quizField(e.target)) return;
+  setTyping(true);
+  if (e.target.id==="kb-keep") return;
   clearTimeout(revealTimer); revealTimer = setTimeout(()=>revealField(e.target), 320);   // after the keyboard slides up
 });
 if (window.visualViewport){
