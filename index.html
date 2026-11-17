@@ -185,10 +185,40 @@ kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--line);border
 .history .row b{font-family:var(--f-display);font-weight:400;font-size:17px}
 .history .row .pct{font-family:var(--f-mono);font-size:12px;color:var(--muted);min-width:3.5em;text-align:right}
 .history .row.cur b{color:var(--delft)}
-.best-line{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:14px}
-.best-line svg{width:16px;height:16px;color:var(--delft)}
-.best-line b{color:var(--ink);font-weight:500}
-#confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:50}
+.records{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.rec{border:1px solid var(--line);border-radius:12px;padding:10px 10px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.rec .mono{color:var(--muted);text-transform:uppercase;font-size:10px;letter-spacing:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rec b{font-family:var(--f-display);font-weight:400;font-size:22px;line-height:1.1;white-space:nowrap}
+.rec span.d{font-size:12px;color:var(--muted)}
+.rec.on{border-color:var(--delft);background:var(--delft-soft)}
+.rec.on b{color:var(--delft)}
+.rec.perfect b::after{content:"★";font-size:13px;color:#E0A800;margin-left:3px;vertical-align:4px}
+#confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:60}
+.record.perfect{background:linear-gradient(90deg,#1a1a1a,#3a3000 40%,#5a0d14);color:#FDDA24}
+/* mega celebration overlay for 100% */
+.mega{position:fixed;inset:0;z-index:55;display:grid;place-items:center;padding:24px;background:radial-gradient(circle at 50% 45%,rgb(70 52 0 / .82),rgb(8 11 22 / .9) 70%);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+  animation:megaIn .35s ease-out both;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.mega.out{animation:megaOut .45s ease-in both}
+.mega .box{text-align:center;color:#fff;display:flex;flex-direction:column;align-items:center;gap:6px;animation:megaPop .9s cubic-bezier(.2,1.7,.35,1) both .05s}
+.mega .flag{display:flex;width:120px;height:10px;border-radius:5px;overflow:hidden;box-shadow:0 2px 12px rgb(0 0 0 / .4)}
+.mega .flag i{flex:1}
+.mega .big{font-family:var(--f-display);font-weight:600;font-size:clamp(84px,30vw,150px);line-height:.95;letter-spacing:-.03em;
+  background:linear-gradient(180deg,#FFF6C2,#FDDA24 45%,#F2A100);-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 4px 18px rgb(242 161 0 / .6));animation:glow 1.4s ease-in-out infinite alternate .9s}
+.mega .t1{font-family:var(--f-display);font-size:30px;text-shadow:0 2px 12px rgb(0 0 0 / .5)}
+.mega .t2{font-size:15px;opacity:.9;text-shadow:0 1px 8px rgb(0 0 0 / .6)}
+.mega .tap{font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;opacity:.65;margin-top:14px;text-transform:uppercase}
+@keyframes megaIn{from{opacity:0}to{opacity:1}}
+@keyframes megaOut{to{opacity:0}}
+@keyframes megaPop{0%{transform:scale(.2) rotate(-12deg);opacity:0}60%{opacity:1}100%{transform:scale(1) rotate(0)}}
+@keyframes glow{to{filter:drop-shadow(0 4px 30px rgb(253 218 36 / .95));transform:scale(1.04)}}
+.shake{animation:shake .9s cubic-bezier(.36,.07,.19,.97) both}
+@keyframes shake{
+  0%,100%{transform:none}
+  10%{transform:translate(-9px,3px) rotate(-1.4deg)} 20%{transform:translate(10px,-4px) rotate(1.6deg)}
+  30%{transform:translate(-12px,2px) rotate(-1.8deg)} 40%{transform:translate(11px,4px) rotate(1.4deg)}
+  50%{transform:translate(-8px,-3px) rotate(-1deg)} 60%{transform:translate(7px,2px) rotate(.8deg)}
+  70%{transform:translate(-5px,-1px) rotate(-.5deg)} 80%{transform:translate(3px,1px)} 90%{transform:translate(-1px,0)}}
 .miss{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
 .miss .forms-inline{font-size:14px;color:var(--muted)}
 .miss .forms-inline b{color:var(--ink);font-weight:500}
@@ -219,6 +249,7 @@ td .tile .orn{display:none}
   nav{grid-column:1/-1;grid-row:2}
   nav button{flex:1;padding:8px 10px}
   .app{gap:20px}
+  .progress{letter-spacing:0;font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   /* iOS zooms into fields under 16px */
   select,input{font-size:16px}
   .tools select{flex:1;min-width:0}
@@ -252,7 +283,7 @@ td .tile .orn{display:none}
   .keys,.btn kbd{display:none}
   .touch-only{display:inline}
 }
-@media (prefers-reduced-motion:reduce){.card{transition:none}.bar span{transition:none}.record,.score.beat{animation:none}}
+@media (prefers-reduced-motion:reduce){.card{transition:none}.bar span{transition:none}.record,.score.beat,.mega,.mega .box,.mega .big{animation:none}}
 </style>
 </head>
 <body>
@@ -680,9 +711,7 @@ function renderQuizSetup(){
       <button class="chip" data-mean="1" ${pressed(Q.meaning,true)}>Ook betekenis vragen</button>
       <button class="chip" data-mean="0" ${pressed(Q.meaning,false)}>Alleen de vormen</button>
     </div></div>
-    ${(()=>{ const e = getScores()[quizKey()];
-      return e && e.best ? `<div class="best-line"><i data-lucide="trophy"></i>Jouw record hier: <b>${e.best.p} / ${e.best.m}</b> (${pctOf(e.best.p,e.best.m)}%)</div>`
-        : `<div class="best-line"><i data-lucide="trophy"></i>Nog geen score voor deze instellingen.</div>`; })()}
+    <div class="field-group"><span class="mono">Jouw records</span>${recordsHTML(Q.kind)}</div>
     <button class="btn primary" id="q-start">Start de quiz</button>
     <p class="note">Elk juist onderdeel is een punt waard: de betekenis en elke vorm. Een vraag is goed als alles klopt. Dan telt het werkwoord als gekend. Een fout zet het terug bij "nog te leren".</p>
   </div>`;
@@ -693,52 +722,132 @@ function renderQuizSetup(){
   $("#q-start").onclick = ()=>startQuiz();
   drawIcons();
 }
-/* ---------- scores: one point per correct part; best + recent history per quiz setting ---------- */
+/* ---------- scores: one point per correct part; records per category (irr / reg / mix) ---------- */
 const PTS_PER_Q = () => S.quiz.meaning ? 4 : 3;
-function quizKey(){ const Q=S.quiz; return [Q.kind, Q.size||"all", Q.source, Q.meaning?"m":"f"].join("|"); }
-function quizLabel(){ const Q=S.quiz;
-  const k = {irr:"Onregelmatig", reg:"Regelmatig", mix:"Gemengd"}[Q.kind];
-  const src = {all:"", learn:" · nog te leren", known:" · al gekend"}[Q.source];
-  return `${k} · ${Q.size?Q.size+" vragen":"alle"}${src}${Q.meaning?" · met betekenis":""}`; }
-function getScores(){ const s = store.get("scores", {}); return (s && typeof s==="object") ? s : {}; }
-function recordScore(key, points, max){
-  const all = getScores(), e = all[key] || {best:null, hist:[]};
-  const prev = e.best;
-  const entry = {p:points, m:max, t:Date.now()};
-  const beat = !!prev && points/max > prev.p/prev.m;
+const CATS = {irr:"Onregelmatig", reg:"Regelmatig", mix:"Gemengd"};
+const pctOf = (p,m) => m ? Math.round(p/m*100) : 0;
+/* better = higher percentage; same percentage over a longer quiz also counts */
+const better = (a,b) => !b || a.p*b.m > b.p*a.m || (a.p*b.m === b.p*a.m && a.m > b.m);
+function getScores(){
+  let s = store.get("scores2", null);
+  if (!s || typeof s!=="object"){
+    s = {};
+    const old = store.get("scores", {}) || {};   // earlier format: one entry per full setting
+    Object.keys(old).forEach(k=>{ const cat=k.split("|")[0], e=old[k]; if(!CATS[cat]||!e) return;
+      const c = s[cat] || (s[cat]={best:null,hist:[]});
+      if (e.best && better(e.best,c.best)) c.best = e.best;
+      c.hist = [...c.hist, ...(e.hist||[])].sort((a,b)=>b.t-a.t).slice(0,5); });
+    store.set("scores2", s);
+  }
+  return s;
+}
+function recordScore(cat, points, max){
+  const Q=S.quiz, all = getScores(), e = all[cat] || {best:null, hist:[]};
+  const prev = e.best, entry = {p:points, m:max, t:Date.now(), n:Q.queue.length, mean:Q.meaning};
+  const beat = !!prev && better(entry, prev);
   if (!prev || beat) e.best = entry;
   e.hist = [entry, ...(e.hist||[])].slice(0,5);
-  all[key] = e; store.set("scores", all);
-  return {prev, beat, first:!prev, best:e.best, hist:e.hist};
+  all[cat] = e; store.set("scores2", all);
+  return {prev, beat, first:!prev, best:e.best, hist:e.hist, perfect: points===max && max>0, cat};
 }
-const pctOf = (p,m) => m ? Math.round(p/m*100) : 0;
+const histDesc = h => h.n ? `${h.n} vragen${h.mean?" · met betekenis":""}` : `${h.m} punten max.`;
 function ago(t){ const m = Math.round((Date.now()-t)/60000);
   if (m<1) return "zonet"; if (m<60) return `${m} min geleden`; const h=Math.round(m/60);
   if (h<24) return `${h} uur geleden`; const d=Math.round(h/24); return d===1?"gisteren":`${d} dagen geleden`; }
+function recordsHTML(active){
+  const all = getScores();
+  return `<div class="records">${Object.keys(CATS).map(c=>{ const b = all[c] && all[c].best;
+    return `<div class="rec ${c===active?"on":""} ${b&&b.p===b.m?"perfect":""}"><span class="mono">${CATS[c]}</span>
+      <b>${b?pctOf(b.p,b.m)+"%":"–"}</b><span class="d">${b?`${b.p}/${b.m}${b.n?` · ${b.n} vragen`:""}`:"nog geen score"}</span></div>`; }).join("")}</div>`;
+}
 
-function confetti(){
-  if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+/* ---------- celebrations ---------- */
+const calm = () => !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
+function confetti(mega){
+  if (calm()) return;
   const old = document.getElementById("confetti"); if (old) old.remove();
   const c = document.createElement("canvas"); c.id="confetti"; document.body.appendChild(c);
   const ctx = c.getContext("2d"), dpr = Math.min(window.devicePixelRatio||1, 2);
   const W = innerWidth, H = innerHeight; c.width=W*dpr; c.height=H*dpr; ctx.scale(dpr,dpr);
   const cs = getComputedStyle(document.body);
   const cols = ["#000000","#FDDA24","#EF3340", cs.getPropertyValue("--delft").trim()||"#2646A6", cs.getPropertyValue("--accent2").trim()||"#7C93D6", "#1E7A54"];
-  const N = W<500 ? 120 : 180, parts=[];
-  for (let i=0;i<N;i++){ const side = i%2 ? 1 : -1;
-    parts.push({x: side<0 ? -10 : W+10, y: H*(.55+Math.random()*.3),
-      vx: -side*(4+Math.random()*7), vy: -(9+Math.random()*9),
-      w: 6+Math.random()*6, h: 8+Math.random()*8, r: Math.random()*6, vr:(Math.random()-.5)*.4,
-      col: cols[i%cols.length], wob: Math.random()*6}); }
-  const t0 = performance.now(), dur = 3200;
+  const parts=[], sparks=[];
+  const cannon = n => { for (let i=0;i<n;i++){ const side = i%2 ? 1 : -1;
+    parts.push({x: side<0 ? -10 : W+10, y: H*(.55+Math.random()*.3), vx: -side*(4+Math.random()*7), vy: -(9+Math.random()*9),
+      w: 6+Math.random()*6, h: 8+Math.random()*8, r: Math.random()*6, vr:(Math.random()-.5)*.4, col: cols[i%cols.length], wob: Math.random()*6}); } };
+  const rain = n => { for (let i=0;i<n;i++) parts.push({x: Math.random()*W, y: -20-Math.random()*H*.6, vx:(Math.random()-.5)*2, vy: 2+Math.random()*3,
+      w: 6+Math.random()*6, h: 8+Math.random()*8, r: Math.random()*6, vr:(Math.random()-.5)*.3, col: cols[i%cols.length], wob: Math.random()*6, slow:true}); };
+  const firework = () => { const x = W*(.15+Math.random()*.7), y = H*(.12+Math.random()*.35), col = ["#FDDA24","#EF3340","#ffffff",cols[3]][Math.floor(Math.random()*4)];
+    for (let i=0;i<46;i++){ const a = i/46*Math.PI*2, v = 2.5+Math.random()*3.5; sparks.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:1,col}); } };
+  const small = W<500;
+  cannon(small?120:180);
+  const timers = [];
+  if (mega){
+    timers.push(setTimeout(()=>cannon(small?120:160), 500), setTimeout(()=>rain(small?140:220), 300), setTimeout(()=>cannon(small?100:140), 1300));
+    for (let k=0;k<7;k++) timers.push(setTimeout(firework, 250+k*450));
+  }
+  const t0 = performance.now(), dur = mega ? 6000 : 3200;
   (function frame(now){
     const t = now-t0; ctx.clearRect(0,0,W,H);
-    for (const p of parts){ p.vy += .32; p.vx *= .99; p.vy *= .99; p.x += p.vx; p.y += p.vy; p.r += p.vr; p.wob += .15;
-      ctx.save(); ctx.globalAlpha = Math.max(0, 1 - Math.max(0,t-dur+900)/900);
-      ctx.translate(p.x,p.y); ctx.rotate(p.r); ctx.scale(1, Math.cos(p.wob));
+    const fade = Math.max(0, 1 - Math.max(0,t-dur+900)/900);
+    for (const p of parts){ p.vy += p.slow ? .05 : .32; p.vx *= .99; p.vy *= p.slow ? 1 : .99; if (p.slow && p.vy>3.2) p.vy=3.2;
+      p.x += p.vx + (p.slow ? Math.sin(p.wob)*.8 : 0); p.y += p.vy; p.r += p.vr; p.wob += .15;
+      ctx.save(); ctx.globalAlpha = fade; ctx.translate(p.x,p.y); ctx.rotate(p.r); ctx.scale(1, Math.cos(p.wob));
       ctx.fillStyle=p.col; ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h); ctx.restore(); }
-    if (t<dur) requestAnimationFrame(frame); else c.remove();
+    for (const s of sparks){ if (s.life<=0) continue; s.vy += .06; s.vx *= .97; s.vy *= .97; s.x += s.vx; s.y += s.vy; s.life -= .014;
+      ctx.globalAlpha = Math.max(0,s.life)*fade; ctx.fillStyle = s.col; ctx.beginPath(); ctx.arc(s.x,s.y,2.4,0,Math.PI*2); ctx.fill(); }
+    ctx.globalAlpha = 1;
+    if (t<dur) requestAnimationFrame(frame); else { timers.forEach(clearTimeout); c.remove(); }
   })(t0);
+}
+function megaBanner(mix){
+  const old = document.querySelector(".mega"); if (old) old.remove();
+  const el = document.createElement("div"); el.className="mega"; el.setAttribute("role","status");
+  el.innerHTML = `<div class="box"><div class="flag"><i style="background:#000"></i><i style="background:#FDDA24"></i><i style="background:#EF3340"></i></div>
+    <div class="big">100%</div><div class="t1">${mix?"Gemengd foutloos!":"Foutloos!"}</div>
+    <div class="t2">${mix?"Regelmatig én onregelmatig, allemaal juist. Chapeau!":"Elk onderdeel juist. Proficiat!"}</div><div class="tap">tik om verder te gaan</div></div>`;
+  document.body.appendChild(el);
+  let gone=false; const close=()=>{ if(gone) return; gone=true; el.classList.add("out"); setTimeout(()=>el.remove(), 450); };
+  el.onclick = close; setTimeout(close, mix ? 4200 : 3400);
+}
+function shake(){
+  if (calm()) return;
+  const els = [document.querySelector(".app"), document.querySelector(".site-foot")].filter(Boolean);
+  els.forEach(e=>{ e.classList.remove("shake"); void e.offsetWidth; e.classList.add("shake"); });
+  setTimeout(()=>els.forEach(e=>e.classList.remove("shake")), 1000);
+  if (navigator.vibrate) try { navigator.vibrate([80,40,80,40,160]); } catch(e){}
+}
+/* sound: a small synthesized fanfare (no audio files). The context is unlocked inside the click that ends the quiz, as iOS requires. */
+let audioCtx = null;
+function unlockAudio(){
+  try { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+    if (!audioCtx) audioCtx = new AC(); if (audioCtx.state==="suspended") audioCtx.resume(); } catch(e){}
+}
+function fanfare(){
+  const a = audioCtx; if (!a) return;
+  try {
+    const t0 = a.currentTime + .05, master = a.createGain(); master.gain.value = .22; master.connect(a.destination);
+    const note = (f, t, d, type="triangle", g=.9) => {
+      const o = a.createOscillator(), v = a.createGain(); o.type = type; o.frequency.setValueAtTime(f, t0+t);
+      v.gain.setValueAtTime(0, t0+t); v.gain.linearRampToValueAtTime(g, t0+t+.02); v.gain.exponentialRampToValueAtTime(.001, t0+t+d);
+      o.connect(v); v.connect(master); o.start(t0+t); o.stop(t0+t+d+.05); };
+    // ta-ta-ta-taaa: G4 C5 E5 G5, then a C-major chord with a little sparkle on top
+    [[392,0],[523.25,.13],[659.25,.26]].forEach(([f,t])=>{ note(f,t,.16,"square",.35); note(f,t,.2); });
+    note(783.99,.39,.3,"square",.35); note(783.99,.39,.35);
+    [523.25,659.25,783.99,1046.5].forEach(f=>{ note(f,.72,1.3,"triangle",.7); note(f/2,.72,1.3,"sine",.5); });
+    [2093,2637,3136,2637,3136,4186].forEach((f,k)=>note(f,.8+k*.08,.25,"sine",.18));
+    // drum roll thump
+    const o = a.createOscillator(), v = a.createGain(); o.type="sine"; o.frequency.setValueAtTime(140,t0+.72); o.frequency.exponentialRampToValueAtTime(45,t0+1.1);
+    v.gain.setValueAtTime(.9,t0+.72); v.gain.exponentialRampToValueAtTime(.001,t0+1.2); o.connect(v); v.connect(master); o.start(t0+.72); o.stop(t0+1.25);
+  } catch(e){}
+}
+function celebrate(F){
+  if (!F) return;
+  if (F.perfect){
+    const mix = F.cat==="mix";
+    megaBanner(mix); confetti(true);
+    if (mix){ fanfare(); setTimeout(shake, 120); }
+  } else if (F.beat) confetti(false);
 }
 
 function startQuiz(list){
@@ -777,10 +886,11 @@ function checkQ(){
 function nextQ(){ const Q=S.quiz; Q.result=null;
   if (Q.i>=Q.queue.length-1){
     Q.phase="done";
-    Q.final = Q.isRetry ? null : recordScore(quizKey(), Q.points, Q.max);
+    Q.final = Q.isRetry ? null : recordScore(Q.kind, Q.points, Q.max);
+    if (Q.final && Q.final.perfect && Q.kind==="mix") unlockAudio();   // must happen inside this click/keypress
     renderQuiz();
-    window.scrollTo({top:0, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"});
-    if (Q.final && Q.final.beat) setTimeout(confetti, 150);
+    window.scrollTo({top:0, behavior: calm() ? "auto" : "smooth"});
+    const F = Q.final; setTimeout(()=>celebrate(F), 150);
     return;
   }
   Q.i++; prepQ(); renderQuiz(); }
@@ -788,17 +898,20 @@ function renderQuizDone(){
   const Q=S.quiz, n=Q.queue.length, F=Q.final, pct=pctOf(Q.points,Q.max);
   const verdict = pct===100 ? "Foutloos." : pct>=80 ? "Bijna alles goed." : pct>=50 ? "Op de goede weg." : "Blijf oefenen, het komt.";
   let badge = "";
-  if (F && F.beat) badge = `<span class="record"><i data-lucide="trophy"></i>Nieuw record! Vorige: ${F.prev.p} / ${F.prev.m}</span>`;
-  else if (F && F.first) badge = `<span class="record first"><i data-lucide="flag"></i>Eerste score voor deze instellingen</span>`;
-  else if (F) badge = `<span class="record miss">Record: ${F.best.p} / ${F.best.m} (${pctOf(F.best.p,F.best.m)}%)</span>`;
+  const cn = F ? CATS[F.cat] : "";
+  if (F && F.perfect && (F.beat || F.first)) badge = `<span class="record perfect"><i data-lucide="crown"></i>100% · nieuw record ${cn}</span>`;
+  else if (F && F.perfect) badge = `<span class="record perfect"><i data-lucide="crown"></i>Weer 100% · ${cn}</span>`;
+  else if (F && F.beat) badge = `<span class="record"><i data-lucide="trophy"></i>Nieuw record ${cn}! Vorige: ${pctOf(F.prev.p,F.prev.m)}%</span>`;
+  else if (F && F.first) badge = `<span class="record first"><i data-lucide="flag"></i>Eerste score ${cn}</span>`;
+  else if (F) badge = `<span class="record miss">Record ${cn}: ${pctOf(F.best.p,F.best.m)}% (${F.best.p} / ${F.best.m})</span>`;
   else badge = `<span class="record miss">Herhaling van fouten telt niet mee voor je record</span>`;
-  const hist = F && F.hist.length>1 ? `<div class="field-group"><span class="mono">Laatste scores · ${esc(quizLabel())}</span><div class="history">
-      ${F.hist.map((h,k)=>`<div class="row ${k===0?"cur":""}"><span class="when">${k===0?"Deze quiz":ago(h.t)}</span><b>${h.p} / ${h.m}</b><span class="pct">${pctOf(h.p,h.m)}%</span></div>`).join("")}
+  const hist = F && F.hist.length>1 ? `<div class="field-group"><span class="mono">Laatste scores · ${cn}</span><div class="history">
+      ${F.hist.map((h,k)=>`<div class="row ${k===0?"cur":""}"><span class="when">${k===0?"Deze quiz":ago(h.t)} · ${histDesc(h)}</span><b>${h.p} / ${h.m}</b><span class="pct">${pctOf(h.p,h.m)}%</span></div>`).join("")}
     </div></div>` : "";
   $("#view").innerHTML = `<div class="panel">
     <div class="result-top"><span class="mono" style="color:var(--muted)">EINDSCORE</span>${badge}</div>
     <div>
-      <p class="score ${F&&F.beat?"beat":""}">${Q.points}<small> / ${Q.max} punten</small></p>
+      <p class="score ${F&&(F.beat||F.perfect)?"beat":""}">${Q.points}<small> / ${Q.max} punten</small></p>
       <div class="score-sub mono"><span>${pct}%</span><span>${Q.right} van ${n} vragen helemaal goed</span></div>
     </div>
     <h2>${verdict}</h2>
