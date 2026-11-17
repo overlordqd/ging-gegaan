@@ -926,7 +926,7 @@ function startQuiz(list){
   if (!pool.length){ $("#q-start").textContent = "Deze groep is leeg. Kies een andere."; return; }
   Q.queue = shuffle(pool).slice(0, list || !Q.size ? pool.length : Q.size);
   Q.ask=null; Q.i=0; Q.right=0; Q.points=0; Q.max=0; Q.final=null; Q.isRetry=!!list; Q.misses=[]; Q.result=null; Q.phase="ask";
-  prepQ(); renderQuiz();
+  prepQ(); renderQuiz(); showViewTop();
 }
 /* ---------- auto-advance after a fully correct answer ---------- */
 const ADVANCE_MS = 750;
@@ -1114,7 +1114,7 @@ function renderQuizDone(){
     </div>
   </div>`;
   if (Q.misses.length) $("#q-retry").onclick = ()=>startQuiz(Q.misses.slice());
-  $("#q-new").onclick = ()=>{ Q.phase="setup"; renderQuiz(); };
+  $("#q-new").onclick = ()=>{ Q.phase="setup"; renderQuiz(); showViewTop(); };
   drawIcons();
 }
 
@@ -1151,10 +1151,18 @@ function renderList(){
 }
 
 /* ---------- tabs & keys ---------- */
+/* After swapping in shorter content (setup -> question, list -> another tab) the old scroll position
+   can leave only the footer on screen. Jump (no animation) so the new content starts in view. */
+function showViewTop(){
+  const v = document.getElementById("view"); if (!v) return;
+  const top = v.getBoundingClientRect().top;
+  if (top < 0 || top > innerHeight * .6) window.scrollTo({top: Math.max(0, scrollY + top - 12), behavior:"auto"});
+}
 function setTab(t){
   S.tab=t; store.set("tab",t);
   document.querySelectorAll("nav button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.tab===t));
   ({cards:renderCards, quiz:renderQuiz, list:renderList})[t]();
+  showViewTop();
 }
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
 document.addEventListener("keydown", e=>{
