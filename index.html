@@ -978,6 +978,7 @@ function revealActiveSoon(quiet){ const a=document.activeElement;
 addEventListener("resize", ()=>{ queueSticky(); revealActiveSoon(REVEAL_QUIET); });
 function revealField(el){
   if (!el || !el.closest || !el.closest("#qform")) return;
+  if (S.quiz.result || el.readOnly) return;   // answer already checked: nothing to place
   const vv = window.visualViewport, vTop = vv ? vv.offsetTop : 0, vH = vv ? vv.height : innerHeight;
   const head = document.querySelector(".q-head");
   // where the verb will sit once pinned: its sticky top plus its (compact) height
@@ -989,7 +990,9 @@ function revealField(el){
   // Safari's floating address bar and the keyboard's arrow/✓ bar sit over the bottom ~110px of the visible area
   const typing = document.body.classList.contains("typing");
   if (typing){ document.body.classList.add("typing-ready"); if (head) head.classList.add("stuck"); }
-  if (typing || top < want || bottom > vH - 110) window.scrollTo({top: Math.max(0, scrollY + top - want), behavior: calm() ? "auto" : "smooth"});
+  const delta = top - want;
+  if (Math.abs(delta) < 6) return;   // already in place: no tiny wobble
+  if (typing || top < want || bottom > vH - 110) window.scrollTo({top: Math.max(0, scrollY + delta), behavior: calm() ? "auto" : "smooth"});
 }
 const isTouch = () => !!(window.matchMedia && matchMedia("(hover: none) and (pointer: coarse)").matches);
 function quizField(el){ return el && (el.id==="kb-keep" || (el.tagName==="INPUT" && el.closest && el.closest("#qform"))); }
@@ -998,7 +1001,10 @@ function setTyping(on){
   document.body.classList.toggle("typing", on);
   if (!on){ document.body.classList.remove("typing-ready"); clearTimeout(revealTimer); queueSticky(); }
 }
-document.addEventListener("focusout", ()=>{ setTimeout(()=>{ if (!quizField(document.activeElement)) setTyping(false); }, 60); });
+document.addEventListener("focusout", ()=>{ setTimeout(()=>{
+  if (quizField(document.activeElement)) return;
+  if (S.tab==="quiz" && S.quiz.phase==="ask" && S.quiz.result){ clearTimeout(revealTimer); return; }   // nextQ tidies up
+  setTyping(false); }, 60); });
 document.addEventListener("focusin", e=>{
   if (!quizField(e.target)) return;
   setTyping(true);
@@ -1048,6 +1054,7 @@ function checkQ(){
 }
 function afterCheck(allRight){
   const Q=S.quiz, last = Q.i>=Q.queue.length-1;
+  clearTimeout(revealTimer);   // a field focused just before submitting must not scroll afterwards
   Q.autoNext = allRight;
   Q.keepKb = false;
   if (allRight){
@@ -1072,15 +1079,23 @@ function nextQ(){ const Q=S.quiz; clearTimeout(Q.advTimer); Q.autoNext=false; Q.
     if (Q.final && Q.final.perfect && Q.kind==="mix") unlockAudio();   // must happen inside this click/keypress
     renderQuiz();
     window.scrollTo({top:0, behavior: calm() ? "auto" : "smooth"});
+    setTimeout(()=>{ if (!quizField(document.activeElement)) setTyping(false); }, 700);
     const F = Q.final; setTimeout(()=>celebrate(F), 150);
     return;
   }
-  Q.i++; prepQ(); renderQuiz();
-  const f = document.querySelector("#qform input");
-  if (f && Q.keepKb) f.focus({preventScroll:true});
-  Q.keepKb = false;
-  const head = document.querySelector(".q-sentinel");
-  if (head && head.getBoundingClientRect().top < 0) head.scrollIntoView({block:"start", behavior: calm() ? "auto" : "smooth"});
+  Q.i++; prepQ();
+  const keep = Q.keepKb; Q.keepKb = false;
+  if (!keep) document.body.classList.remove("typing-ready");   // the new header starts full size
+  renderQuiz();
+  if (keep){   // keyboard stays open: the field gets placed under the verb once (via focus)
+    const f = document.querySelector("#qform input"); if (f) f.focus({preventScroll:true});
+    return;
+  }
+  // keyboard closed: one scroll so the new question starts at the top, then drop the typing room
+  const sen = document.querySelector(".q-sentinel");
+  if (sen){ const y = sen.getBoundingClientRect().top;
+    if (y < 0 || y > innerHeight * .5) window.scrollTo({top: Math.max(0, scrollY + y - 96), behavior: calm() ? "auto" : "smooth"}); }
+  setTimeout(()=>{ if (!quizField(document.activeElement)) setTyping(false); }, 700);
 }
 function renderQuizDone(){
   const Q=S.quiz, n=Q.queue.length, F=Q.final, pct=pctOf(Q.points,Q.max);
