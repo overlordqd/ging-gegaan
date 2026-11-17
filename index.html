@@ -167,6 +167,28 @@ kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--line);border
 .score{font-family:var(--f-display);font-size:64px;line-height:1;margin:0}
 .score small{font-size:24px;color:var(--muted)}
 .misses{display:flex;flex-direction:column}
+.q-pts{font-family:var(--f-mono);font-size:12px;letter-spacing:.04em;border-radius:999px;padding:3px 10px;background:var(--delft-soft);color:var(--delft);white-space:nowrap}
+.q-pts.full{background:var(--good-soft);color:var(--good)}
+.q-pts.zero{background:var(--bad-soft);color:var(--bad)}
+.result-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.score-sub{display:flex;flex-wrap:wrap;gap:4px 14px;color:var(--muted);margin-top:8px}
+.record{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;font-weight:600;border-radius:999px;padding:6px 14px;background:var(--good-soft);color:var(--good);animation:pop .6s cubic-bezier(.2,1.6,.4,1) both .15s}
+.record svg{width:16px;height:16px}
+.record.first{background:var(--delft-soft);color:var(--delft)}
+.record.miss{background:var(--paper);color:var(--muted);font-weight:500;animation:none}
+.score.beat{animation:pulse 1.2s ease-out .2s both}
+@keyframes pop{0%{transform:scale(.4);opacity:0}100%{transform:scale(1);opacity:1}}
+@keyframes pulse{0%{transform:scale(1)}30%{transform:scale(1.12);color:var(--good)}100%{transform:scale(1)}}
+.history{display:flex;flex-direction:column}
+.history .row{display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:baseline;padding:8px 0;border-top:1px solid var(--line);font-size:14px}
+.history .row .when{color:var(--muted)}
+.history .row b{font-family:var(--f-display);font-weight:400;font-size:17px}
+.history .row .pct{font-family:var(--f-mono);font-size:12px;color:var(--muted);min-width:3.5em;text-align:right}
+.history .row.cur b{color:var(--delft)}
+.best-line{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:14px}
+.best-line svg{width:16px;height:16px;color:var(--delft)}
+.best-line b{color:var(--ink);font-weight:500}
+#confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:50}
 .miss{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
 .miss .forms-inline{font-size:14px;color:var(--muted)}
 .miss .forms-inline b{color:var(--ink);font-weight:500}
@@ -230,7 +252,7 @@ td .tile .orn{display:none}
   .keys,.btn kbd{display:none}
   .touch-only{display:inline}
 }
-@media (prefers-reduced-motion:reduce){.card{transition:none}.bar span{transition:none}}
+@media (prefers-reduced-motion:reduce){.card{transition:none}.bar span{transition:none}.record,.score.beat{animation:none}}
 </style>
 </head>
 <body>
@@ -608,9 +630,10 @@ function renderQuiz(){
       ${Q.opts.map((o,k)=>{ const st = r ? (o===v.en?"right":(Q.pick===k?"wrong":"")) : "";
         return `<button type="button" class="chip ${st}" data-k="${k}" aria-pressed="${Q.pick===k}" ${r?"disabled":""}>${esc(o)}</button>`; }).join("")}
     </div></div>` : "";
-  const typeLine = r ? `<div class="type-line"><span class="tag">${v.reg?"":"onregelmatig · "}${PATTERNS[v.pat]}</span><span class="note">${esc(PATTERN_NOTE[v.pat])}</span></div>` : "";
+  const ppq = PTS_PER_Q();
+  const typeLine = r ? `<div class="type-line"><span class="q-pts ${r.pts===ppq?"full":r.pts===0?"zero":""}">+${r.pts} / ${ppq} punten</span><span class="tag">${v.reg?"":"onregelmatig · "}${PATTERNS[v.pat]}</span><span class="note">${esc(PATTERN_NOTE[v.pat])}</span></div>` : "";
   $("#view").innerHTML = `<div class="panel">
-    <div class="q-meta mono"><span>Vraag ${Q.i+1} van ${Q.queue.length}</span><span>${Q.right} goed</span></div>
+    <div class="q-meta mono"><span>Vraag ${Q.i+1} van ${Q.queue.length}</span><span>${Q.points} punten</span></div>
     <div class="bar"><span style="width:${(Q.i/Q.queue.length*100)}%"></span></div>
     <div class="q-head">${head}</div>
     <form id="qform" style="display:flex;flex-direction:column;gap:16px">
@@ -657,22 +680,74 @@ function renderQuizSetup(){
       <button class="chip" data-mean="1" ${pressed(Q.meaning,true)}>Ook betekenis vragen</button>
       <button class="chip" data-mean="0" ${pressed(Q.meaning,false)}>Alleen de vormen</button>
     </div></div>
+    ${(()=>{ const e = getScores()[quizKey()];
+      return e && e.best ? `<div class="best-line"><i data-lucide="trophy"></i>Jouw record hier: <b>${e.best.p} / ${e.best.m}</b> (${pctOf(e.best.p,e.best.m)}%)</div>`
+        : `<div class="best-line"><i data-lucide="trophy"></i>Nog geen score voor deze instellingen.</div>`; })()}
     <button class="btn primary" id="q-start">Start de quiz</button>
-    <p class="note">Een vraag is goed als alles klopt. Dan telt het werkwoord als gekend. Een fout zet het terug bij "nog te leren".</p>
+    <p class="note">Elk juist onderdeel is een punt waard: de betekenis en elke vorm. Een vraag is goed als alles klopt. Dan telt het werkwoord als gekend. Een fout zet het terug bij "nog te leren".</p>
   </div>`;
   document.querySelectorAll("[data-kind]").forEach(b=>b.onclick=()=>{Q.kind=b.dataset.kind; store.set("qkind",Q.kind); renderQuizSetup();});
   document.querySelectorAll("[data-size]").forEach(b=>b.onclick=()=>{Q.size=+b.dataset.size; store.set("qsize",Q.size); renderQuizSetup();});
   document.querySelectorAll("[data-src]").forEach(b=>b.onclick=()=>{Q.source=b.dataset.src; renderQuizSetup();});
   document.querySelectorAll("[data-mean]").forEach(b=>b.onclick=()=>{Q.meaning=b.dataset.mean==="1"; store.set("qmean",Q.meaning); renderQuizSetup();});
   $("#q-start").onclick = ()=>startQuiz();
+  drawIcons();
 }
+/* ---------- scores: one point per correct part; best + recent history per quiz setting ---------- */
+const PTS_PER_Q = () => S.quiz.meaning ? 4 : 3;
+function quizKey(){ const Q=S.quiz; return [Q.kind, Q.size||"all", Q.source, Q.meaning?"m":"f"].join("|"); }
+function quizLabel(){ const Q=S.quiz;
+  const k = {irr:"Onregelmatig", reg:"Regelmatig", mix:"Gemengd"}[Q.kind];
+  const src = {all:"", learn:" · nog te leren", known:" · al gekend"}[Q.source];
+  return `${k} · ${Q.size?Q.size+" vragen":"alle"}${src}${Q.meaning?" · met betekenis":""}`; }
+function getScores(){ const s = store.get("scores", {}); return (s && typeof s==="object") ? s : {}; }
+function recordScore(key, points, max){
+  const all = getScores(), e = all[key] || {best:null, hist:[]};
+  const prev = e.best;
+  const entry = {p:points, m:max, t:Date.now()};
+  const beat = !!prev && points/max > prev.p/prev.m;
+  if (!prev || beat) e.best = entry;
+  e.hist = [entry, ...(e.hist||[])].slice(0,5);
+  all[key] = e; store.set("scores", all);
+  return {prev, beat, first:!prev, best:e.best, hist:e.hist};
+}
+const pctOf = (p,m) => m ? Math.round(p/m*100) : 0;
+function ago(t){ const m = Math.round((Date.now()-t)/60000);
+  if (m<1) return "zonet"; if (m<60) return `${m} min geleden`; const h=Math.round(m/60);
+  if (h<24) return `${h} uur geleden`; const d=Math.round(h/24); return d===1?"gisteren":`${d} dagen geleden`; }
+
+function confetti(){
+  if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const old = document.getElementById("confetti"); if (old) old.remove();
+  const c = document.createElement("canvas"); c.id="confetti"; document.body.appendChild(c);
+  const ctx = c.getContext("2d"), dpr = Math.min(window.devicePixelRatio||1, 2);
+  const W = innerWidth, H = innerHeight; c.width=W*dpr; c.height=H*dpr; ctx.scale(dpr,dpr);
+  const cs = getComputedStyle(document.body);
+  const cols = ["#000000","#FDDA24","#EF3340", cs.getPropertyValue("--delft").trim()||"#2646A6", cs.getPropertyValue("--accent2").trim()||"#7C93D6", "#1E7A54"];
+  const N = W<500 ? 120 : 180, parts=[];
+  for (let i=0;i<N;i++){ const side = i%2 ? 1 : -1;
+    parts.push({x: side<0 ? -10 : W+10, y: H*(.55+Math.random()*.3),
+      vx: -side*(4+Math.random()*7), vy: -(9+Math.random()*9),
+      w: 6+Math.random()*6, h: 8+Math.random()*8, r: Math.random()*6, vr:(Math.random()-.5)*.4,
+      col: cols[i%cols.length], wob: Math.random()*6}); }
+  const t0 = performance.now(), dur = 3200;
+  (function frame(now){
+    const t = now-t0; ctx.clearRect(0,0,W,H);
+    for (const p of parts){ p.vy += .32; p.vx *= .99; p.vy *= .99; p.x += p.vx; p.y += p.vy; p.r += p.vr; p.wob += .15;
+      ctx.save(); ctx.globalAlpha = Math.max(0, 1 - Math.max(0,t-dur+900)/900);
+      ctx.translate(p.x,p.y); ctx.rotate(p.r); ctx.scale(1, Math.cos(p.wob));
+      ctx.fillStyle=p.col; ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h); ctx.restore(); }
+    if (t<dur) requestAnimationFrame(frame); else c.remove();
+  })(t0);
+}
+
 function startQuiz(list){
   const Q=S.quiz;
   let pool = list || VERBS.filter(v => (Q.kind==="mix" || (Q.kind==="reg")===v.reg) &&
     (Q.source==="all" ? true : Q.source==="learn" ? !known.has(v.inf) : known.has(v.inf)));
   if (!pool.length){ $("#q-start").textContent = "Deze groep is leeg. Kies een andere."; return; }
   Q.queue = shuffle(pool).slice(0, list || !Q.size ? pool.length : Q.size);
-  Q.i=0; Q.right=0; Q.misses=[]; Q.result=null; Q.phase="ask";
+  Q.i=0; Q.right=0; Q.points=0; Q.max=0; Q.final=null; Q.isRetry=!!list; Q.misses=[]; Q.result=null; Q.phase="ask";
   prepQ(); renderQuiz();
 }
 function prepQ(){
@@ -693,18 +768,41 @@ function checkQ(){
   else if (!res.pf.ok && pf.endsWith(" "+v.part)) res.pf.msg = "Ander hulpwerkwoord:";
   const meanOk = !Q.meaning || (Q.pick!=null && Q.opts[Q.pick]===v.en);
   const all = meanOk && res.sg.ok && res.pl.ok && res.pf.ok;
+  res.pts = (Q.meaning && meanOk ? 1 : 0) + res.sg.ok + res.pl.ok + res.pf.ok;
+  Q.points += res.pts; Q.max += PTS_PER_Q();
   if (all){ Q.right++; known.add(v.inf); } else { Q.misses.push(v); known.delete(v.inf); }
   saveKnown();
   Q.result = res; renderQuiz();
 }
-function nextQ(){ const Q=S.quiz; Q.result=null; if (Q.i>=Q.queue.length-1){ Q.phase="done"; } else { Q.i++; prepQ(); } renderQuiz(); }
+function nextQ(){ const Q=S.quiz; Q.result=null;
+  if (Q.i>=Q.queue.length-1){
+    Q.phase="done";
+    Q.final = Q.isRetry ? null : recordScore(quizKey(), Q.points, Q.max);
+    renderQuiz();
+    window.scrollTo({top:0, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"});
+    if (Q.final && Q.final.beat) setTimeout(confetti, 150);
+    return;
+  }
+  Q.i++; prepQ(); renderQuiz(); }
 function renderQuizDone(){
-  const Q=S.quiz, n=Q.queue.length, pct=Math.round(Q.right/n*100);
+  const Q=S.quiz, n=Q.queue.length, F=Q.final, pct=pctOf(Q.points,Q.max);
   const verdict = pct===100 ? "Foutloos." : pct>=80 ? "Bijna alles goed." : pct>=50 ? "Op de goede weg." : "Blijf oefenen, het komt.";
+  let badge = "";
+  if (F && F.beat) badge = `<span class="record"><i data-lucide="trophy"></i>Nieuw record! Vorige: ${F.prev.p} / ${F.prev.m}</span>`;
+  else if (F && F.first) badge = `<span class="record first"><i data-lucide="flag"></i>Eerste score voor deze instellingen</span>`;
+  else if (F) badge = `<span class="record miss">Record: ${F.best.p} / ${F.best.m} (${pctOf(F.best.p,F.best.m)}%)</span>`;
+  else badge = `<span class="record miss">Herhaling van fouten telt niet mee voor je record</span>`;
+  const hist = F && F.hist.length>1 ? `<div class="field-group"><span class="mono">Laatste scores · ${esc(quizLabel())}</span><div class="history">
+      ${F.hist.map((h,k)=>`<div class="row ${k===0?"cur":""}"><span class="when">${k===0?"Deze quiz":ago(h.t)}</span><b>${h.p} / ${h.m}</b><span class="pct">${pctOf(h.p,h.m)}%</span></div>`).join("")}
+    </div></div>` : "";
   $("#view").innerHTML = `<div class="panel">
-    <span class="mono" style="color:var(--muted)">RESULTAAT</span>
-    <p class="score">${Q.right}<small> / ${n}</small></p>
+    <div class="result-top"><span class="mono" style="color:var(--muted)">EINDSCORE</span>${badge}</div>
+    <div>
+      <p class="score ${F&&F.beat?"beat":""}">${Q.points}<small> / ${Q.max} punten</small></p>
+      <div class="score-sub mono"><span>${pct}%</span><span>${Q.right} van ${n} vragen helemaal goed</span></div>
+    </div>
     <h2>${verdict}</h2>
+    ${hist}
     ${Q.misses.length ? `<div class="field-group"><span class="mono">Fouten om te herhalen</span><div class="misses">
       ${Q.misses.map(v=>`<div class="miss">${tile(v,40)}<div><b style="font-family:var(--f-display);font-size:18px;font-weight:400">${v.inf}</b>
         <div class="forms-inline"><b>${v.sg.join("/")}</b> · <b>${v.pl[0]}</b> · <b>${perf(v)}</b></div></div></div>`).join("")}
