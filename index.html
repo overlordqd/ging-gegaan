@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <title>Ging Gegaan</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="theme-color" content="#F6F7FB">
@@ -151,7 +151,23 @@ kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--line);border
 .type-line{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
 .field-group{display:flex;flex-direction:column;gap:8px}
 .field-group>.mono{color:var(--muted);text-transform:uppercase}
-.q-head{display:flex;gap:18px;align-items:center}
+.q-head{display:flex;gap:18px;align-items:center;position:sticky;z-index:5;top:calc(var(--vv-top,0px) + env(safe-area-inset-top,0px));
+  margin-inline:-24px;padding:8px 24px;background:var(--surface);transition:padding .2s,box-shadow .2s;border-radius:0}
+.q-head .tile{transition:width .2s}
+.q-head .inf,.q-head .en{transition:font-size .2s}
+.q-head.stuck{padding-block:8px;box-shadow:0 1px 0 var(--line),0 8px 16px -10px rgb(0 0 0 / .25)}
+.q-head.stuck .tile{--ts:44px !important}
+.q-head.stuck .tile .orn{display:none}
+.q-head.stuck .inf{font-size:24px !important}
+.q-head.stuck .en{font-size:13px}
+.q-sentinel{height:0}
+.panel.ok-flash{animation:okFlash .55s ease-out}
+@keyframes okFlash{0%{box-shadow:0 0 0 0 var(--good)}40%{box-shadow:0 0 0 4px var(--good-soft),0 0 0 6px var(--good)}100%{box-shadow:0 0 0 0 transparent}}
+.auto-next{display:flex;align-items:center;gap:8px;color:var(--good);font-weight:500}
+.auto-next .bar{flex:1;height:3px}
+.auto-next .bar span{background:var(--good);width:0;animation:fillBar var(--adv,700ms) linear forwards}
+@keyframes fillBar{to{width:100%}}
+#kb-keep{position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;font-size:16px;border:0;padding:0;pointer-events:none}
 .q-head .inf{font-size:38px;text-align:left;margin:0}
 .q-head .en{margin:2px 0 0}
 .q-meta{display:flex;justify-content:space-between;color:var(--muted)}
@@ -271,7 +287,7 @@ td .tile .orn{display:none}
   .form{padding:12px 0}
   .form .val{font-size:22px}
   .panel{padding:20px 18px}
-  .q-head{gap:14px}
+  .q-head{gap:14px;margin-inline:-18px;padding-inline:18px}
   .q-head .inf{font-size:30px}
   .q-head .tile{--ts:80px !important}
   /* list: drop the icon column so the table fits the screen */
@@ -288,7 +304,7 @@ td .tile .orn{display:none}
   .keys,.btn kbd{display:none}
   .touch-only{display:inline}
 }
-@media (prefers-reduced-motion:reduce){.card{transition:none}.bar span{transition:none}.record,.score.beat,.mega,.mega .box,.mega .big{animation:none}}
+@media (prefers-reduced-motion:reduce){.card{transition:none}.bar span{transition:none}.record,.score.beat,.mega,.mega .box,.mega .big,.panel.ok-flash{animation:none}.q-head,.q-head .tile,.q-head .inf{transition:none}}
 </style>
 </head>
 <body>
@@ -656,7 +672,7 @@ function renderQuiz(){
     const st = r ? (r[key].ok?"ok":"no") : "";
     const fix = r && !r[key].ok ? `<div class="fix">${r[key].msg||"Juist:"} <b>${r[key].want}</b></div>` : "";
     return `<div class="field ${st}"><label for="${id}">${label}<span>${sub}</span></label>
-      <input id="${id}" lang="nl" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="${ph}" value="${esc(r?r[key].got:"")}" ${r?"readonly":""}>${fix}</div>`;
+      <input id="${id}" enterkeyhint="next" lang="nl" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="${ph}" value="${esc(r?r[key].got:"")}" ${r?"readonly":""}>${fix}</div>`;
   };
   const quick = Q.mode==="quick", askMean = quick ? Q.ask==="mean" : Q.meaning;
   const show = k => !quick || Q.ask===k;
@@ -673,7 +689,7 @@ function renderQuiz(){
   $("#view").innerHTML = `<div class="panel">
     <div class="q-meta mono"><span>Vraag ${Q.i+1} van ${Q.queue.length}</span><span>${Q.points} ${Q.points===1?"punt":"punten"}</span></div>
     <div class="bar"><span style="width:${(Q.i/Q.queue.length*100)}%"></span></div>
-    <div class="q-head">${head}</div>
+    <div class="q-sentinel"></div><div class="q-head">${head}</div>
     <form id="qform" style="display:flex;flex-direction:column;gap:16px">
       ${quick ? `<span class="ask-label"><i data-lucide="zap"></i>${ASK_LABEL[Q.ask]}</span>` : ""}
       ${mean}
@@ -681,6 +697,7 @@ function renderQuiz(){
       ${show("pl") ? fld("q-pl","Imperfectum","wij · jullie · zij","bijv. liepen","pl") : ""}
       ${show("pf") ? fld("q-pf","Perfectum","hulpwerkwoord + deelwoord","bijv. heeft gelopen","pf") : ""}
       ${typeLine}
+      ${r && Q.autoNext ? `<div class="auto-next" style="--adv:${ADVANCE_MS}ms"><i data-lucide="check" style="width:18px;height:18px"></i>Goed! <span class="bar"><span></span></span></div>` : ""}
       <button class="btn primary" type="submit" id="q-submit" ${!r && quick && askMean ? "hidden" : ""}>${r ? (Q.i===Q.queue.length-1?"Bekijk resultaat":"Volgende") : "Controleer"} <kbd style="background:none;color:inherit;border-color:currentColor;opacity:.6">enter</kbd></button>
     </form>
     ${r || !show("pf") ? "" : `<p class="note">Schrijf het perfectum met <b>heeft</b> of <b>is</b>, zoals in <i>hij heeft gelopen</i>.</p>`}
@@ -690,10 +707,26 @@ function renderQuiz(){
     Q.pick = +b.dataset.k;
     document.querySelectorAll("[data-k]").forEach(x => x.setAttribute("aria-pressed", x===b));
     if (quick) checkQ();   // quick mode: one tap answers the meaning question
+    else {   // full mode: show the chosen meaning in the (sticky) header and go straight to the first form
+      const en = document.querySelector(".q-head .en"); if (en) en.textContent = "Jouw keuze: " + Q.opts[Q.pick];
+      const f = $("#q-sg"); if (f) f.focus(); }
   });
+  // return key: jump to the next empty field, submit from the last one
+  const inputs = [...document.querySelectorAll("#qform input")];
+  inputs.forEach((el,k)=>{
+    if (k===inputs.length-1) el.setAttribute("enterkeyhint","done");
+    el.addEventListener("keydown", e=>{
+      if (e.key!=="Enter" || r) return;
+      const next = inputs.slice(k+1).find(x=>!x.value.trim());
+      if (next){ e.preventDefault(); next.focus(); }
+    });
+  });
+  if (r) $("#qform").closest(".panel").classList.toggle("ok-flash", !!Q.autoNext);
   drawIcons();
-  const first = r ? $("#q-submit") : document.querySelector("#qform input");
+  watchStickyHead();
+  const first = r ? (Q.autoNext ? null : $("#q-submit")) : document.querySelector("#qform input");
   if (first) first.focus({preventScroll:true});
+  else if (r && Q.autoNext && Q.keepKb) $("#kb-keep") && $("#kb-keep").focus({preventScroll:true});
 }
 function renderQuizSetup(){
   const Q=S.quiz;
@@ -882,13 +915,69 @@ function startQuiz(list){
   Q.ask=null; Q.i=0; Q.right=0; Q.points=0; Q.max=0; Q.final=null; Q.isRetry=!!list; Q.misses=[]; Q.result=null; Q.phase="ask";
   prepQ(); renderQuiz();
 }
+/* ---------- auto-advance after a fully correct answer ---------- */
+const ADVANCE_MS = 750;
+function pickAsk(prev){
+  const parts = ["sg","pl","pf", ...(S.quiz.meaning?["mean"]:[])].filter(k=>k!==prev);
+  return parts[Math.floor(Math.random()*parts.length)];   // never the same part twice in a row
+}
+function scheduleAdvance(){
+  const Q=S.quiz; clearTimeout(Q.advTimer);
+  const at = Q.i;
+  Q.advTimer = setTimeout(()=>{ if (S.tab==="quiz" && Q.phase==="ask" && Q.result && Q.i===at) nextQ(); }, ADVANCE_MS);
+}
+/* A hidden input keeps the iPhone keyboard open while the next question renders,
+   so focus can move straight into its field (iOS only opens the keyboard from a tap). */
+function keepKeyboard(on){
+  let k = document.getElementById("kb-keep");
+  if (!k){ k = document.createElement("input"); k.id="kb-keep"; k.setAttribute("aria-hidden","true"); k.tabIndex=-1;
+    k.setAttribute("autocomplete","off"); k.setAttribute("autocorrect","off"); k.setAttribute("autocapitalize","off"); document.body.appendChild(k); }
+  if (on) k.focus({preventScroll:true});
+}
+
+/* ---------- sticky verb header + keep the field you type in visible above the keyboard ---------- */
+let stickyRaf = 0, revealTimer = 0;
+function updateSticky(){
+  stickyRaf = 0;
+  const vv = window.visualViewport;
+  document.documentElement.style.setProperty("--vv-top", (vv ? Math.max(0, vv.offsetTop) : 0) + "px");
+  const sen = document.querySelector(".q-sentinel"), head = document.querySelector(".q-head");
+  if (!sen || !head) return;
+  const top = parseFloat(getComputedStyle(head).top) || 0, y = sen.getBoundingClientRect().top;
+  // hysteresis so the header shrinking can't make it flip back and forth
+  if (!head.classList.contains("stuck") && y < top - 2) head.classList.add("stuck");
+  else if (head.classList.contains("stuck") && y > top + 60) head.classList.remove("stuck");
+}
+const queueSticky = () => { if (!stickyRaf) stickyRaf = requestAnimationFrame(updateSticky); };
+function watchStickyHead(){ updateSticky(); }
+addEventListener("scroll", queueSticky, {passive:true});
+function revealActiveSoon(delay){ const a=document.activeElement;
+  if (a && a.tagName==="INPUT" && a.id!=="kb-keep"){ clearTimeout(revealTimer); revealTimer = setTimeout(()=>revealField(a), delay); } }
+addEventListener("resize", ()=>{ queueSticky(); revealActiveSoon(80); });
+function revealField(el){
+  if (!el || !el.closest || !el.closest("#qform")) return;
+  const vv = window.visualViewport, vTop = vv ? vv.offsetTop : 0, vH = vv ? vv.height : innerHeight;
+  const head = document.querySelector(".q-head");
+  const headBottom = head ? head.getBoundingClientRect().bottom - vTop : 0;
+  const field = el.closest(".field") || el, r = field.getBoundingClientRect();
+  const btn = document.getElementById("q-submit");
+  const want = Math.max(headBottom, 0) + 12;            // just under the sticky verb
+  const top = r.top - vTop, bottom = (btn && !btn.hidden ? Math.max(r.bottom, btn.getBoundingClientRect().bottom) : r.bottom) - vTop;
+  if (top < want || bottom > vH - 8) window.scrollBy({top: top - want, behavior: calm() ? "auto" : "smooth"});
+}
+document.addEventListener("focusin", e=>{
+  if (e.target.id==="kb-keep" || e.target.tagName!=="INPUT") return;
+  clearTimeout(revealTimer); revealTimer = setTimeout(()=>revealField(e.target), 320);   // after the keyboard slides up
+});
+if (window.visualViewport){
+  visualViewport.addEventListener("resize", ()=>{ queueSticky(); revealActiveSoon(60); });
+  visualViewport.addEventListener("scroll", queueSticky);
+}
+
 function prepQ(){
   const Q=S.quiz, v=Q.queue[Q.i];
   Q.pick = null;
-  if (Q.mode==="quick"){
-    const parts = ["sg","pl","pf", ...(Q.meaning?["mean"]:[])].filter(k=>k!==Q.ask || Q.i===0);
-    Q.ask = parts[Math.floor(Math.random()*parts.length)];   // never the same part twice in a row
-  }
+  if (Q.mode==="quick"){ Q.ask = Q.pendingAsk || pickAsk(Q.i===0 ? null : Q.ask); Q.pendingAsk = null; }
   const others = shuffle([...new Set(VERBS.filter(x=>x.en!==v.en).map(x=>x.en))]).slice(0,3);
   Q.opts = shuffle([v.en, ...others]);
 }
@@ -909,7 +998,7 @@ function checkQ(){
     res.pts = ok ? 1 : 0; Q.points += res.pts; Q.max += 1;
     // one part right isn't proof you know the verb, so quick mode only demotes on a mistake
     if (ok) Q.right++; else { Q.misses.push(v); known.delete(v.inf); }
-    saveKnown(); Q.result = res; renderQuiz(); return;
+    saveKnown(); Q.result = res; afterCheck(ok); return;
   }
   const meanOk = !Q.meaning || (Q.pick!=null && Q.opts[Q.pick]===v.en);
   const all = meanOk && res.sg.ok && res.pl.ok && res.pf.ok;
@@ -917,9 +1006,27 @@ function checkQ(){
   Q.points += res.pts; Q.max += PTS_PER_Q();
   if (all){ Q.right++; known.add(v.inf); } else { Q.misses.push(v); known.delete(v.inf); }
   saveKnown();
-  Q.result = res; renderQuiz();
+  Q.result = res; afterCheck(all);
 }
-function nextQ(){ const Q=S.quiz; Q.result=null;
+function afterCheck(allRight){
+  const Q=S.quiz, last = Q.i>=Q.queue.length-1;
+  Q.autoNext = allRight;
+  Q.keepKb = false;
+  if (allRight){
+    if (last && Q.kind==="mix" && Q.points===Q.max && !Q.isRetry) unlockAudio();   // still inside the tap
+    if (!last){
+      if (Q.mode==="quick") Q.pendingAsk = pickAsk(Q.ask);
+      const nextTypes = Q.mode==="quick" ? Q.pendingAsk!=="mean" : !Q.meaning;
+      const typing = document.activeElement && document.activeElement.tagName==="INPUT";
+      Q.keepKb = nextTypes && (typing || Q.mode==="quick");
+      if (Q.keepKb) keepKeyboard(true);
+    }
+    scheduleAdvance();
+  }
+  renderQuiz();
+  if (!allRight && document.activeElement && document.activeElement.tagName==="INPUT") document.activeElement.blur();
+}
+function nextQ(){ const Q=S.quiz; clearTimeout(Q.advTimer); Q.autoNext=false; Q.result=null;
   if (Q.i>=Q.queue.length-1){
     Q.phase="done";
     Q.final = Q.isRetry ? null : recordScore(Q.kind, Q.points, Q.max);
@@ -929,7 +1036,13 @@ function nextQ(){ const Q=S.quiz; Q.result=null;
     const F = Q.final; setTimeout(()=>celebrate(F), 150);
     return;
   }
-  Q.i++; prepQ(); renderQuiz(); }
+  Q.i++; prepQ(); renderQuiz();
+  const f = document.querySelector("#qform input");
+  if (f && Q.keepKb) f.focus({preventScroll:true});
+  Q.keepKb = false;
+  const head = document.querySelector(".q-sentinel");
+  if (head && head.getBoundingClientRect().top < 0) head.scrollIntoView({block:"start", behavior: calm() ? "auto" : "smooth"});
+}
 function renderQuizDone(){
   const Q=S.quiz, n=Q.queue.length, F=Q.final, pct=pctOf(Q.points,Q.max);
   const verdict = pct===100 ? "Foutloos." : pct>=80 ? "Bijna alles goed." : pct>=50 ? "Op de goede weg." : "Blijf oefenen, het komt.";
