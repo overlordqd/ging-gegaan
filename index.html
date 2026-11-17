@@ -675,7 +675,7 @@ function renderQuiz(){
     const st = r ? (r[key].ok?"ok":"no") : "";
     const fix = r && !r[key].ok ? `<div class="fix">${r[key].msg||"Juist:"} <b>${r[key].want}</b></div>` : "";
     return `<div class="field ${st}"><label for="${id}">${label}<span>${sub}</span></label>
-      <input id="${id}" enterkeyhint="next" lang="nl" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="${ph}" value="${esc(r?r[key].got:"")}" ${r?"readonly":""}>${fix}</div>`;
+      <input id="${id}" enterkeyhint="next" lang="nl" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" writingsuggestions="false" data-1p-ignore data-lpignore="true" placeholder="${ph}" value="${esc(r?r[key].got:"")}" ${r?"readonly":""}>${fix}</div>`;
   };
   const quick = Q.mode==="quick", askMean = quick ? Q.ask==="mean" : Q.meaning;
   const show = k => !quick || Q.ask===k;
@@ -944,7 +944,7 @@ function scheduleAdvance(){
 function keepKeyboard(on){
   let k = document.getElementById("kb-keep");
   if (!k){ k = document.createElement("input"); k.id="kb-keep"; k.setAttribute("aria-hidden","true"); k.tabIndex=-1;
-    k.setAttribute("autocomplete","off"); k.setAttribute("autocorrect","off"); k.setAttribute("autocapitalize","off"); document.body.appendChild(k); }
+    k.setAttribute("autocomplete","off"); k.setAttribute("autocorrect","off"); k.setAttribute("autocapitalize","off"); k.setAttribute("spellcheck","false"); k.setAttribute("writingsuggestions","false"); document.body.appendChild(k); }
   if (on) k.focus({preventScroll:true});
 }
 
@@ -1122,7 +1122,7 @@ function renderQuizDone(){
 function renderList(){
   const L=S.list;
   $("#view").innerHTML = `<div class="tools">
-      <input type="search" id="l-q" placeholder="Zoek werkwoord of vertaling" value="${esc(L.q)}" style="flex:1;min-width:180px" aria-label="Zoeken">
+      <input type="search" id="l-q" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" writingsuggestions="false" placeholder="Zoek werkwoord of vertaling" value="${esc(L.q)}" style="flex:1;min-width:180px" aria-label="Zoeken">
       <select id="l-pat" aria-label="Soort of patroon">${opt("all",`Alle werkwoorden (${VERBS.length})`,L.pat)}${opt("irr",`Onregelmatig (${IRR_N})`,L.pat)}${opt("reg",`Regelmatig (${REG_N})`,L.pat)}${patternOptions(L.pat)}</select>
     </div>
     <div class="table-wrap" style="margin-top:12px"><table>
