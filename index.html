@@ -169,7 +169,7 @@ kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--line);border
 .auto-next .bar{flex:1;height:3px}
 .auto-next .bar span{background:var(--good);width:0;animation:fillBar var(--adv,700ms) linear forwards}
 @keyframes fillBar{to{width:100%}}
-#kb-keep{position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;font-size:16px;border:0;padding:0;pointer-events:none}
+
 .q-head .inf{font-size:38px;text-align:left;margin:0}
 .q-head .en{margin:2px 0 0}
 .q-meta{display:flex;justify-content:space-between;color:var(--muted)}
@@ -747,10 +747,6 @@ function renderQuiz(){
   const ib = document.querySelector(".in-btn");
   if (ib) ib.previousElementSibling.style.paddingRight = (ib.offsetWidth + 14) + "px";
   watchStickyHead();
-  const touch = window.matchMedia && matchMedia("(hover: none) and (pointer: coarse)").matches;
-  const first = r ? (Q.autoNext || touch ? null : $("#q-submit")) : (touch && !Q.keepKb ? null : document.querySelector("#qform input"));
-  if (first) first.focus({preventScroll:true});
-  else if (r && Q.autoNext && Q.keepKb) $("#kb-keep") && $("#kb-keep").focus({preventScroll:true});
 }
 function renderQuizSetup(){
   const Q=S.quiz;
@@ -951,14 +947,8 @@ function scheduleAdvance(){
   const at = Q.i;
   Q.advTimer = setTimeout(()=>{ if (S.tab==="quiz" && Q.phase==="ask" && Q.result && Q.i===at) nextQ(); }, ADVANCE_MS);
 }
-/* A hidden input keeps the iPhone keyboard open while the next question renders,
-   so focus can move straight into its field (iOS only opens the keyboard from a tap). */
-function keepKeyboard(on){
-  let k = document.getElementById("kb-keep");
-  if (!k){ k = document.createElement("input"); k.id="kb-keep"; k.setAttribute("aria-hidden","true"); k.tabIndex=-1;
-    k.setAttribute("autocomplete","off"); k.setAttribute("autocorrect","off"); k.setAttribute("autocapitalize","off"); k.setAttribute("spellcheck","false"); k.setAttribute("writingsuggestions","false"); document.body.appendChild(k); }
-  if (on) k.focus({preventScroll:true});
-}
+/* No autofocus: nothing in the quiz is focused by script; this drops focus (and closes the keyboard). */
+function dropFocus(){ const a = document.activeElement; if (a && a !== document.body && a.blur) a.blur(); }
 
 /* ---------- sticky verb header (no automatic scrolling anywhere in the quiz) ---------- */
 let stickyRaf = 0;
@@ -1000,7 +990,7 @@ function keepInView(sel){
 function prepQ(){
   const Q=S.quiz, v=Q.queue[Q.i];
   Q.pick = null;
-  if (Q.mode==="quick"){ Q.ask = Q.pendingAsk || pickAsk(Q.i===0 ? null : Q.ask); Q.pendingAsk = null; }
+  if (Q.mode==="quick") Q.ask = pickAsk(Q.i===0 ? null : Q.ask);
   const others = shuffle([...new Set(VERBS.filter(x=>x.en!==v.en).map(x=>x.en))]).slice(0,3);
   Q.opts = shuffle([v.en, ...others]);
 }
@@ -1034,23 +1024,15 @@ function checkQ(){
 function afterCheck(allRight){
   const Q=S.quiz, last = Q.i>=Q.queue.length-1;
   Q.autoNext = allRight;
-  Q.keepKb = false;
   if (allRight){
     if (last && Q.kind==="mix" && Q.points===Q.max && !Q.isRetry) unlockAudio();   // still inside the tap
-    if (!last){
-      if (Q.mode==="quick") Q.pendingAsk = pickAsk(Q.ask);
-      const nextTypes = Q.mode==="quick" ? Q.pendingAsk!=="mean" : !Q.meaning;
-      const typing = document.activeElement && document.activeElement.tagName==="INPUT";
-      Q.keepKb = nextTypes && (typing || Q.mode==="quick");
-      if (Q.keepKb) keepKeyboard(true);
-    }
     scheduleAdvance();
   }
-  // wrong answer: close the keyboard now, while the field still exists, so it can't eat the next tap
-  if (!allRight && document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
+  dropFocus();   // close the keyboard now, while the field still exists, so it can't eat the next tap
   renderQuiz();
 }
 function nextQ(){ const Q=S.quiz; clearTimeout(Q.advTimer); Q.autoNext=false; Q.result=null;
+  dropFocus();
   if (Q.i>=Q.queue.length-1){
     Q.phase="done";
     Q.final = Q.isRetry ? null : recordScore(Q.kind, Q.points, Q.max);
@@ -1062,10 +1044,8 @@ function nextQ(){ const Q=S.quiz; clearTimeout(Q.advTimer); Q.autoNext=false; Q.
     return;
   }
   Q.i++; prepQ();
-  const keep = Q.keepKb; Q.keepKb = false;
   renderQuiz();
   keepInView("#view .panel");
-  if (keep){ const f = document.querySelector("#qform input"); if (f) f.focus({preventScroll:true}); }
 }
 function renderQuizDone(){
   const Q=S.quiz, n=Q.queue.length, F=Q.final, pct=pctOf(Q.points,Q.max);
@@ -1151,6 +1131,10 @@ function setTab(t){
   showViewTop();
 }
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
+document.addEventListener("keydown", e=>{
+  if (e.key==="Enter" && S.tab==="quiz" && S.quiz.phase==="ask" && S.quiz.result && !e.repeat
+      && !/BUTTON|SELECT|TEXTAREA/.test(document.activeElement.tagName)){ e.preventDefault(); nextQ(); }
+});
 document.addEventListener("keydown", e=>{
   if (S.tab!=="cards" || /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
   if (e.key===" "){ if (e.target.tagName==="BUTTON") return; e.preventDefault(); flip(); }
