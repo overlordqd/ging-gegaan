@@ -957,7 +957,8 @@ function updateSticky(){
   const sen = document.querySelector(".q-sentinel"), head = document.querySelector(".q-head");
   if (!sen || !head) return;
   const top = parseFloat(getComputedStyle(head).top) || 0, y = sen.getBoundingClientRect().top;
-  if (document.body.classList.contains("typing")){ head.classList.add("stuck"); return; }
+  if (document.body.classList.contains("typing-ready")){ head.classList.add("stuck"); return; }
+  if (document.body.classList.contains("typing")) return;   // keyboard still opening: leave the header as it is
   // hysteresis so the header shrinking can't make it flip back and forth
   if (!head.classList.contains("stuck") && y < top - 2) head.classList.add("stuck");
   else if (head.classList.contains("stuck") && y > top + 60) head.classList.remove("stuck");
@@ -965,9 +966,16 @@ function updateSticky(){
 const queueSticky = () => { if (!stickyRaf) stickyRaf = requestAnimationFrame(updateSticky); };
 function watchStickyHead(){ updateSticky(); }
 addEventListener("scroll", queueSticky, {passive:true});
-function revealActiveSoon(delay){ const a=document.activeElement;
-  if (a && a.tagName==="INPUT" && a.id!=="kb-keep"){ clearTimeout(revealTimer); revealTimer = setTimeout(()=>revealField(a), delay); } }
-addEventListener("resize", ()=>{ queueSticky(); revealActiveSoon(80); });
+/* Reveal timing: the iPhone keyboard takes ~0.3-0.5s to slide up and fires resize events on the way.
+   Wait until those have been quiet for a moment (and at least REVEAL_MIN after the tap), then scroll once. */
+const REVEAL_MIN = 550, REVEAL_QUIET = 280;
+let focusAt = 0;
+const keyboardUp = () => !!(window.visualViewport && visualViewport.height < innerHeight - 150);
+function revealActiveSoon(quiet){ const a=document.activeElement;
+  if (!a || a.tagName!=="INPUT" || a.id==="kb-keep") return;
+  const wait = Math.max(quiet, REVEAL_MIN - (Date.now() - focusAt));
+  clearTimeout(revealTimer); revealTimer = setTimeout(()=>revealField(a), wait); }
+addEventListener("resize", ()=>{ queueSticky(); revealActiveSoon(REVEAL_QUIET); });
 function revealField(el){
   if (!el || !el.closest || !el.closest("#qform")) return;
   const vv = window.visualViewport, vTop = vv ? vv.offsetTop : 0, vH = vv ? vv.height : innerHeight;
@@ -980,6 +988,7 @@ function revealField(el){
   const top = r.top - vTop, bottom = (btn && !btn.hidden ? Math.max(r.bottom, btn.getBoundingClientRect().bottom) : r.bottom) - vTop;
   // Safari's floating address bar and the keyboard's arrow/✓ bar sit over the bottom ~110px of the visible area
   const typing = document.body.classList.contains("typing");
+  if (typing){ document.body.classList.add("typing-ready"); if (head) head.classList.add("stuck"); }
   if (typing || top < want || bottom > vH - 110) window.scrollTo({top: Math.max(0, scrollY + top - want), behavior: calm() ? "auto" : "smooth"});
 }
 const isTouch = () => !!(window.matchMedia && matchMedia("(hover: none) and (pointer: coarse)").matches);
@@ -987,18 +996,19 @@ function quizField(el){ return el && (el.id==="kb-keep" || (el.tagName==="INPUT"
 function setTyping(on){
   if (!isTouch()) return;
   document.body.classList.toggle("typing", on);
-  const head = document.querySelector(".q-head"); if (head && on) head.classList.add("stuck");
-  if (!on) queueSticky();
+  if (!on){ document.body.classList.remove("typing-ready"); clearTimeout(revealTimer); queueSticky(); }
 }
 document.addEventListener("focusout", ()=>{ setTimeout(()=>{ if (!quizField(document.activeElement)) setTyping(false); }, 60); });
 document.addEventListener("focusin", e=>{
   if (!quizField(e.target)) return;
   setTyping(true);
   if (e.target.id==="kb-keep") return;
-  clearTimeout(revealTimer); revealTimer = setTimeout(()=>revealField(e.target), 320);   // after the keyboard slides up
+  // keyboard already open (moving between fields or questions): place the field right away; otherwise wait for it
+  if (keyboardUp() || document.body.classList.contains("typing-ready")){ clearTimeout(revealTimer); revealTimer = setTimeout(()=>revealField(e.target), 60); return; }
+  focusAt = Date.now(); revealActiveSoon(0);
 });
 if (window.visualViewport){
-  visualViewport.addEventListener("resize", ()=>{ queueSticky(); revealActiveSoon(60); });
+  visualViewport.addEventListener("resize", ()=>{ queueSticky(); revealActiveSoon(REVEAL_QUIET); });
   visualViewport.addEventListener("scroll", queueSticky);
 }
 
