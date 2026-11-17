@@ -151,16 +151,20 @@ kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--line);border
 .type-line{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
 .field-group{display:flex;flex-direction:column;gap:8px}
 .field-group>.mono{color:var(--muted);text-transform:uppercase}
-.q-head{display:flex;gap:18px;align-items:center;position:sticky;z-index:5;top:calc(var(--vv-top,0px) + env(safe-area-inset-top,0px));
-  margin-inline:-24px;padding:8px 24px;background:var(--surface);transition:padding .2s,box-shadow .2s;border-radius:0}
-.q-head .tile{transition:width .2s}
-.q-head .inf,.q-head .en{transition:font-size .2s}
-.q-head.stuck{padding-block:8px;box-shadow:0 1px 0 var(--line),0 8px 16px -10px rgb(0 0 0 / .25)}
-.q-head.stuck .tile{--ts:44px !important}
-.q-head.stuck .tile .orn{display:none}
-.q-head.stuck .inf{font-size:24px !important}
-.q-head.stuck .en{font-size:13px}
-.q-sentinel{height:0}
+.q-head{display:flex;gap:18px;align-items:center}
+/* Compact verb bar: a separate copy that fades in at the top once the verb has scrolled away.
+   The verb itself never changes size, so nothing on the page shifts. */
+.panel{--pp:24px}
+.q-mini{position:sticky;top:calc(var(--vv-top,0px) + env(safe-area-inset-top,0px));height:0;z-index:6;margin:0 calc(-1 * var(--pp)) -20px}
+.q-mini .mbar{display:flex;align-items:center;gap:12px;padding:8px var(--pp);background:var(--surface);
+  box-shadow:0 1px 0 var(--line),0 8px 16px -10px rgb(0 0 0 / .25);opacity:0;transform:translateY(-6px);
+  transition:opacity .16s ease,transform .16s ease;pointer-events:none}
+.q-mini.show .mbar{opacity:1;transform:none}
+.q-mini.instant .mbar{transition:none}
+.q-mini .tile{--ts:44px !important;border-radius:4px}
+.q-mini .tile .orn{display:none}
+.q-mini .inf{font-size:24px;line-height:1.1;text-align:left;margin:0}
+.q-mini .en{font-size:13px;margin:0}
 /* typing on a phone: the iPhone keyboard doesn't shrink the page, so add room below to scroll the field up */
 
 .panel.ok-flash{animation:okFlash .55s ease-out}
@@ -292,7 +296,8 @@ td .tile .orn{display:none}
   .form{padding:12px 0}
   .form .val{font-size:22px}
   .panel{padding:20px 18px}
-  .q-head{gap:14px;margin-inline:-18px;padding-inline:18px}
+  .q-head{gap:14px}
+  .panel{--pp:18px}
   .q-head .inf{font-size:30px}
   .q-head .tile{--ts:80px !important}
   /* list: drop the icon column so the table fits the screen */
@@ -309,7 +314,7 @@ td .tile .orn{display:none}
   .keys,.btn kbd{display:none}
   .touch-only{display:inline}
 }
-@media (prefers-reduced-motion:reduce){.card{transition:none}.bar span{transition:none}.record,.score.beat,.mega,.mega .box,.mega .big,.panel.ok-flash{animation:none}.q-head,.q-head .tile,.q-head .inf{transition:none}}
+@media (prefers-reduced-motion:reduce){.card{transition:none}.bar span{transition:none}.record,.score.beat,.mega,.mega .box,.mega .big,.panel.ok-flash{animation:none}.q-mini .mbar{transition:none}}
 </style>
 </head>
 <body>
@@ -673,8 +678,6 @@ function renderQuiz(){
   if (Q.phase==="setup") return renderQuizSetup();
   if (Q.phase==="done") return renderQuizDone();
   const v = Q.queue[Q.i], r = Q.result;
-  const oldHead = document.querySelector(".q-head");
-  const keepCompact = !!(oldHead && oldHead.classList.contains("stuck"));   // re-render without the header changing size
   const last = Q.i===Q.queue.length-1;
   const btnLabel = r ? (last ? `Resultaat<i data-lucide="flag"></i>` : `Volgende<i data-lucide="arrow-right"></i>`) : `Controleer`;
   const btnKey = Q.mode==="quick" ? (Q.ask==="mean" ? null : Q.ask) : "pf";   // which field holds the button
@@ -688,9 +691,9 @@ function renderQuiz(){
   const quick = Q.mode==="quick", askMean = quick ? Q.ask==="mean" : Q.meaning;
   const show = k => !quick || Q.ask===k;
   const hide = askMean && !r;
-  const head = hide
-    ? `<div class="tile" style="--ts:104px">${ORN}<span class="fallback">?</span></div><div><p class="inf">${v.inf}</p><p class="en">Kies hieronder de betekenis</p></div>`
-    : `${tile(v,104)}<div><p class="inf">${v.inf}</p><p class="en">${esc(v.en)}</p></div>`;
+  const headHTML = size => hide
+    ? `<div class="tile" style="--ts:${size}px">${ORN}<span class="fallback">?</span></div><div><p class="inf">${v.inf}</p><p class="en">Kies hieronder de betekenis</p></div>`
+    : `${tile(v,size)}<div><p class="inf">${v.inf}</p><p class="en">${esc(v.en)}</p></div>`;
   const mean = askMean ? `<div class="field-group"><span class="mono">Wat betekent het?</span><div class="choices">
       ${Q.opts.map((o,k)=>{ const st = r ? (o===v.en?"right":(Q.pick===k?"wrong":"")) : "";
         return `<button type="button" class="chip ${st}" data-k="${k}" aria-pressed="${Q.pick===k}" ${r?"disabled":""}>${esc(o)}</button>`; }).join("")}
@@ -700,7 +703,8 @@ function renderQuiz(){
   $("#view").innerHTML = `<div class="panel">
     <div class="q-meta mono"><span>Vraag ${Q.i+1} van ${Q.queue.length}</span><span>${Q.points} ${Q.points===1?"punt":"punten"}</span></div>
     <div class="bar"><span style="width:${(Q.i/Q.queue.length*100)}%"></span></div>
-    <div class="q-sentinel"></div><div class="q-head ${keepCompact?"stuck":""}">${head}</div>
+    <div class="q-mini" aria-hidden="true"><div class="mbar">${headHTML(44)}</div></div>
+    <div class="q-head">${headHTML(104)}</div>
     <form id="qform" style="display:flex;flex-direction:column;gap:16px">
       ${quick ? `<span class="ask-label"><i data-lucide="zap"></i>${ASK_LABEL[Q.ask]}</span>` : ""}
       ${mean}
@@ -728,7 +732,7 @@ function renderQuiz(){
     document.querySelectorAll("[data-k]").forEach(x => x.setAttribute("aria-pressed", x===b));
     if (quick) checkQ();   // quick mode: one tap answers the meaning question
     else {   // full mode: show the chosen meaning in the (sticky) header and go straight to the first form
-      const en = document.querySelector(".q-head .en"); if (en) en.textContent = "Jouw keuze: " + Q.opts[Q.pick];
+      document.querySelectorAll(".q-head .en, .q-mini .en").forEach(en => en.textContent = "Jouw keuze: " + Q.opts[Q.pick]);
       const f = $("#q-sg"); if (f) f.focus({preventScroll:true}); }
   });
   // return key: jump to the next empty field, submit from the last one
@@ -956,15 +960,21 @@ function updateSticky(){
   stickyRaf = 0;
   const vv = window.visualViewport;
   document.documentElement.style.setProperty("--vv-top", (vv ? Math.max(0, vv.offsetTop) : 0) + "px");
-  const sen = document.querySelector(".q-sentinel"), head = document.querySelector(".q-head");
-  if (!sen || !head) return;
-  const top = parseFloat(getComputedStyle(head).top) || 0, y = sen.getBoundingClientRect().top;
-  // hysteresis so the header shrinking can't make it flip back and forth
-  if (!head.classList.contains("stuck") && y < top - 2) head.classList.add("stuck");
-  else if (head.classList.contains("stuck") && y > top + 60) head.classList.remove("stuck");
+  const head = document.querySelector(".q-head"), mini = document.querySelector(".q-mini");
+  if (!head || !mini) return;
+  // shown exactly while the bar is pinned to the top edge, which is when the verb itself has scrolled off.
+  // Nothing changes size, so there is no feedback loop and the same scroll position always gives the same result.
+  const top = parseFloat(getComputedStyle(mini).top) || 0;
+  const bar = mini.firstElementChild.offsetHeight;
+  // show as soon as what is left of the verb would sit under the bar anyway (the bar covers it: seamless hand-over)
+  mini.classList.toggle("show", mini.getBoundingClientRect().top <= top + 0.5 && head.getBoundingClientRect().bottom < top + bar);
 }
 const queueSticky = () => { if (!stickyRaf) stickyRaf = requestAnimationFrame(updateSticky); };
-function watchStickyHead(){ updateSticky(); }
+function watchStickyHead(){   // a freshly rendered question: set the bar's state without fading
+  const m = document.querySelector(".q-mini"); if (m) m.classList.add("instant");
+  updateSticky();
+  if (m){ void m.offsetWidth; requestAnimationFrame(()=>m.classList.remove("instant")); }
+}
 addEventListener("scroll", queueSticky, {passive:true});
 addEventListener("resize", queueSticky);
 if (window.visualViewport){
